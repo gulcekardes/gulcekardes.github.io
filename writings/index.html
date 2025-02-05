@@ -307,15 +307,16 @@
         {
           z: allStrings.map(s => [...s].map(Number)),
           y: allStrings,
+          x: Array.from({length: gameState.n}, (_, i) => i + 1),
           type: 'heatmap',
           colorscale: 'Blues'
         }
       ];
 
       const layout = {
-        title: 'Binary Strings Heatmap',
-        xaxis: { title: 'Position' },
-        yaxis: { title: 'String' }
+        title: 'Binary Strings Matrix (Sorted by Parity)',
+        xaxis: { title: 'Position', tickmode: 'array', tickvals: Array.from({length: gameState.n}, (_, i) => i + 1) },
+        yaxis: { title: 'String Index', tickmode: 'array', tickvals: Array.from({length: allStrings.length}, (_, i) => i) }
       };
 
       Plotly.newPlot('heatmap', data, layout);
@@ -324,13 +325,18 @@
       const similarities = calculateSimilarities();
       const similarityData = [{
         z: [similarities],
+        x: Array.from({length: gameState.n}, (_, i) => i + 1),
         type: 'heatmap',
-        colorscale: 'Blues'
+        colorscale: [
+          [0, 'red'],     // low similarity -> red
+          [0.5, 'yellow'], // medium similarity -> yellow
+          [1, 'green']    // high similarity -> green
+        ]
       }];
 
       const similarityLayout = {
         title: 'Column Similarity Scores',
-        xaxis: { title: 'Position' },
+        xaxis: { title: 'Position', tickmode: 'array', tickvals: Array.from({length: gameState.n}, (_, i) => i + 1) },
         yaxis: { showticklabels: false }
       };
 
