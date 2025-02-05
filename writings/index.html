@@ -1,1 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>M-Chopping Game</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.2/plotly.min.js"></script>
+  <style>
+    body { 
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .setup, .game { padding: 20px; }
+    .sets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .set {
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .string {
+      display: inline-block;
+      padding: 5px 10px;
+      margin: 5px;
+      border: 1px solid #007bff;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .string.selected {
+      background: #007bff;
+      color: white;
+    }
+    .string.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    button {
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+    .message {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 4px;
+      background: #f8f9fa;
+    }
+    #heatmap, #similarity { height: 400px; }
+  </style>
+</head>
+<body>
+  <div class="setup" id="setup">
+    <h2>M-Chopping Game Setup</h2>
+    <div>
+      <label>String Length (n):</label>
+      <input type="number" id="n" min="2" max="5" value="3">
+    </div>
+    <div>
+      <label>Chopping Parameter (m):</label>
+      <input type="number" id="m" min="1.1" step="0.1" value="2">
+    </div>
+    <button onclick="initGame()">Start Game</button>
+  </div>
 
+  <div class="game" id="game" style="display: none;">
+    <h2>Round <span id="round">0</span></h2>
+    <div id="heatmap"></div>
+    <div id="similarity"></div>
+    <div class="sets">
+      <div class="set">
+        <h3>Set A (<span id="setASize">0</span>)</h3>
+        <div id="setA"></div>
+      </div>
+      <div class="set">
+        <h3>Set B (<span id="setBSize">0</span>)</h3>
+        <div id="setB"></div>
+      </div>
+    </div>
+    <div class="message" id="message"></div>
+    <button onclick="makeMove()" id="moveButton">Make Move</button>
+    <button onclick="resetGame()" id="resetButton" style="display: none;">Play Again</button>
+  </div>
+
+  <script>
+    let gameState = {
+      n: 3,
+      m: 2,
+      round: 0,
+      currentA: new Set(),
+      currentB: new Set(),
+      selectedStrings: new Set(),
+      gameOver: false
+    };
+
+    function generateBinaryStrings(n) {
+      if (n === 0) return [''];
+      const shorter = generateBinaryStrings(n - 1);
+      return [...shorter.map(s => s + '0'), ...shorter.map(s => s + '1')];
+    }
+
+    function initGame() {
+      const n = parseInt(document.getElementById('n').value);
+      const m = parseFloat(document.getElementById('m').value);
+      
+      if (n < 2 || n > 5 || m <= 1) {
+        alert('Invalid parameters');
+        return;
+      }
+
+      gameState = {
+        n, m,
+        round: 0,
+        currentA: new Set(),
+        currentB: new Set(),
+        selectedStrings: new Set(),
+        gameOver: false
+      };
+
+      const allStrings = generateBinaryStrings(n);
+      allStrings.forEach(s => {
+        const sum = [...s].reduce((acc, bit) => acc + parseInt(bit), 0);
+        if (sum % 2 === 0) gameState.currentA.add(s);
+        else gameState.currentB.add(s);
+      });
+
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      updateDisplay();
+      setMessage("Game started! You play as Spoiler.");
+    }
+
+    function toggleString(string) {
+      if (gameState.gameOver) return;
+      
+      const isCurrentSetA = gameState.round % 2 === 1;
+      const currentSet = isCurrentSetA ? gameState.currentA : gameState.currentB;
+      
+      if (!currentSet.has(string)) return;
+      
+      if (gameState.selectedStrings.has(string)) {
+        gameState.selectedStrings.delete(string);
+      } else {
+        gameState.selectedStrings.add(string);
+      }
+      
+      updateDisplay();
+    }
+
+    function checkWinningCondition() {
+      for (let i = 0; i < gameState.n; i++) {
+        const aChars = new Set([...gameState.currentA].map(s => s[i]));
+        const bChars = new Set([...gameState.currentB].map(s => s[i]));
+        const intersection = new Set([...aChars].filter(x => bChars.has(x)));
+        if (intersection.size === 0) return [true, i];
+      }
+      return [false, -1];
+    }
+
+    function makeComputerMove(spoilerSet) {
+      const availableSet = gameState.round % 2 === 1 ? gameState.currentB : gameState.currentA;
+      
+      const stringScores = {};
+      [...availableSet].forEach(s => {
+        let score = 0;
+        for (let i = 0; i < gameState.n; i++) {
+          if ([...spoilerSet].some(sp => sp[i] === s[i])) score++;
+        }
+        stringScores[s] = score;
+      });
+
+      const maxScore = Math.max(...Object.values(stringScores));
+      return new Set(
+        Object.entries(stringScores)
+          .filter(([_, score]) => score === maxScore)
+          .map(([s, _]) => s)
+      );
+    }
+
+    function makeMove() {
+      const currentSet = gameState.round % 2 === 1 ? gameState.currentA : gameState.currentB;
+      const minSize = Math.max(1, Math.floor(currentSet.size / gameState.m));
+
+      if (gameState.selectedStrings.size < minSize) {
+        setMessage(`Must select at least ${minSize} strings!`);
+        return;
+      }
+
+      if (gameState.round % 2 === 1) {
+        gameState.currentA = new Set(gameState.selectedStrings);
+      } else {
+        gameState.currentB = new Set(gameState.selectedStrings);
+      }
+
+      let [won, coord] = checkWinningCondition();
+      if (won) {
+        endGame(coord);
+        return;
+      }
+
+      const computerChoice = makeComputerMove(gameState.selectedStrings);
+      if (gameState.round % 2 === 1) {
+        gameState.currentB = computerChoice;
+      } else {
+        gameState.currentA = computerChoice;
+      }
+
+      [won, coord] = checkWinningCondition();
+      if (won) {
+        endGame(coord);
+        return;
+      }
+
+      gameState.round++;
+      gameState.selectedStrings.clear();
+      updateDisplay();
+      setMessage("Your turn!");
+    }
+
+    function endGame(coord) {
+      gameState.gameOver = true;
+      setMessage(`Spoiler wins! Found differing coordinate ${coord}`);
+      document.getElementById('moveButton').style.display = 'none';
+      document.getElementById('resetButton').style.display = 'inline-block';
+      updateDisplay();
+    }
+
+    function resetGame() {
+      document.getElementById('setup').style.display = 'block';
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('moveButton').style.display = 'inline-block';
+      document.getElementById('resetButton').style.display = 'none';
+    }
+
+    function updateDisplay() {
+      document.getElementById('round').textContent = gameState.round;
+      document.getElementById('setASize').textContent = gameState.currentA.size;
+      document.getElementById('setBSize').textContent = gameState.currentB.size;
+
+      const setADiv = document.getElementById('setA');
+      const setBDiv = document.getElementById('setB');
+      
+      setADiv.innerHTML = '';
+      setBDiv.innerHTML = '';
+
+      [...gameState.currentA].sort().forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'string' + 
+          (gameState.selectedStrings.has(s) ? ' selected' : '') +
+          (gameState.round % 2 !== 1 ? ' disabled' : '');
+        div.textContent = s;
+        div.onclick = () => toggleString(s);
+        setADiv.appendChild(div);
+      });
+
+      [...gameState.currentB].sort().forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'string' + 
+          (gameState.selectedStrings.has(s) ? ' selected' : '') +
+          (gameState.round % 2 !== 0 ? ' disabled' : '');
+        div.textContent = s;
+        div.onclick = () => toggleString(s);
+        setBDiv.appendChild(div);
+      });
+
+      updateHeatmap();
+    }
+
+    function calculateSimilarities() {
+      const allStrings = [...gameState.currentA, ...gameState.currentB].sort();
+      const halfway = allStrings.length / 2;
+      const similarities = [];
+      
+      for (let col = 0; col < gameState.n; col++) {
+        const evenParity = allStrings.slice(0, halfway).map(s => s[col]);
+        const oddParity = allStrings.slice(halfway).map(s => s[col]);
+        const matches = evenParity.reduce((acc, e) => 
+          acc + oddParity.reduce((innerAcc, o) => innerAcc + (e === o ? 1 : 0), 0), 0);
+        similarities.push(matches / (halfway * halfway));
+      }
+      
+      return similarities;
+    }
+
+    function updateHeatmap() {
+      const allStrings = [...gameState.currentA, ...gameState.currentB].sort();
+      const data = [
+        {
+          z: allStrings.map(s => [...s].map(Number)),
+          y: allStrings,
+          type: 'heatmap',
+          colorscale: 'Blues'
+        }
+      ];
+
+      const layout = {
+        title: 'Binary Strings Heatmap',
+        xaxis: { title: 'Position' },
+        yaxis: { title: 'String' }
+      };
+
+      Plotly.newPlot('heatmap', data, layout);
+    }
+
+    function setMessage(msg) {
+      document.getElementById('message').textContent = msg;
+    }
+  </script>
+</body>
+</html>
