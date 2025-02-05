@@ -137,13 +137,13 @@
       document.getElementById('setup').style.display = 'none';
       document.getElementById('game').style.display = 'block';
       updateDisplay();
-      setMessage("Game started! You play as Spoiler.");
+      setMessage("Game started! You play as Spoiler. Choose from set A.");
     }
 
     function toggleString(string) {
       if (gameState.gameOver) return;
       
-      const isCurrentSetA = gameState.round % 2 === 1;
+      const isCurrentSetA = gameState.round % 2 === 0;
       const currentSet = isCurrentSetA ? gameState.currentA : gameState.currentB;
       
       if (!currentSet.has(string)) return;
@@ -168,7 +168,7 @@
     }
 
     function makeComputerMove(spoilerSet) {
-      const availableSet = gameState.round % 2 === 1 ? gameState.currentB : gameState.currentA;
+      const availableSet = gameState.round % 2 === 0 ? gameState.currentB : gameState.currentA;
       
       const stringScores = {};
       [...availableSet].forEach(s => {
@@ -188,7 +188,7 @@
     }
 
     function makeMove() {
-      const currentSet = gameState.round % 2 === 1 ? gameState.currentA : gameState.currentB;
+      const currentSet = gameState.round % 2 === 0 ? gameState.currentA : gameState.currentB;
       const minSize = Math.max(1, Math.floor(currentSet.size / gameState.m));
 
       if (gameState.selectedStrings.size < minSize) {
@@ -196,7 +196,7 @@
         return;
       }
 
-      if (gameState.round % 2 === 1) {
+      if (gameState.round % 2 === 0) {
         gameState.currentA = new Set(gameState.selectedStrings);
       } else {
         gameState.currentB = new Set(gameState.selectedStrings);
@@ -209,7 +209,7 @@
       }
 
       const computerChoice = makeComputerMove(gameState.selectedStrings);
-      if (gameState.round % 2 === 1) {
+      if (gameState.round % 2 === 0) {
         gameState.currentB = computerChoice;
       } else {
         gameState.currentA = computerChoice;
@@ -224,7 +224,7 @@
       gameState.round++;
       gameState.selectedStrings.clear();
       updateDisplay();
-      setMessage("Your turn!");
+      setMessage(`Your turn! Choose from set ${gameState.round % 2 === 0 ? 'A' : 'B'}`);
     }
 
     function endGame(coord) {
@@ -257,7 +257,7 @@
         const div = document.createElement('div');
         div.className = 'string' + 
           (gameState.selectedStrings.has(s) ? ' selected' : '') +
-          (gameState.round % 2 !== 1 ? ' disabled' : '');
+          (gameState.round % 2 !== 0 ? ' disabled' : '');
         div.textContent = s;
         div.onclick = () => toggleString(s);
         setADiv.appendChild(div);
@@ -267,7 +267,7 @@
         const div = document.createElement('div');
         div.className = 'string' + 
           (gameState.selectedStrings.has(s) ? ' selected' : '') +
-          (gameState.round % 2 !== 0 ? ' disabled' : '');
+          (gameState.round % 2 !== 1 ? ' disabled' : '');
         div.textContent = s;
         div.onclick = () => toggleString(s);
         setBDiv.appendChild(div);
@@ -277,7 +277,11 @@
     }
 
     function calculateSimilarities() {
-      const allStrings = [...gameState.currentA, ...gameState.currentB].sort();
+      const allStrings = [...gameState.currentA, ...gameState.currentB].sort((a, b) => {
+        const parityA = [...a].reduce((acc, bit) => acc + parseInt(bit), 0) % 2;
+        const parityB = [...b].reduce((acc, bit) => acc + parseInt(bit), 0) % 2;
+        return parityA - parityB;
+      });
       const halfway = allStrings.length / 2;
       const similarities = [];
       
@@ -293,7 +297,12 @@
     }
 
     function updateHeatmap() {
-      const allStrings = [...gameState.currentA, ...gameState.currentB].sort();
+      const allStrings = [...gameState.currentA, ...gameState.currentB].sort((a, b) => {
+        const parityA = [...a].reduce((acc, bit) => acc + parseInt(bit), 0) % 2;
+        const parityB = [...b].reduce((acc, bit) => acc + parseInt(bit), 0) % 2;
+        return parityA - parityB;
+      });
+
       const data = [
         {
           z: allStrings.map(s => [...s].map(Number)),
@@ -310,6 +319,22 @@
       };
 
       Plotly.newPlot('heatmap', data, layout);
+
+      // Update similarity plot
+      const similarities = calculateSimilarities();
+      const similarityData = [{
+        z: [similarities],
+        type: 'heatmap',
+        colorscale: 'Blues'
+      }];
+
+      const similarityLayout = {
+        title: 'Column Similarity Scores',
+        xaxis: { title: 'Position' },
+        yaxis: { showticklabels: false }
+      };
+
+      Plotly.newPlot('similarity', similarityData, similarityLayout);
     }
 
     function setMessage(msg) {
