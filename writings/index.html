@@ -303,20 +303,66 @@
         return parityA - parityB;
       });
 
+      const halfway = allStrings.length / 2;
       const data = [
         {
           z: allStrings.map(s => [...s].map(Number)),
-          y: allStrings,
+          y: Array.from({length: allStrings.length}, (_, i) => i),
           x: Array.from({length: gameState.n}, (_, i) => i + 1),
           type: 'heatmap',
-          colorscale: 'Blues'
+          colorscale: 'Blues',
+          text: allStrings.map(s => s),
+          hoverongaps: false,
+          showscale: true
         }
       ];
 
       const layout = {
         title: 'Binary Strings Matrix (Sorted by Parity)',
-        xaxis: { title: 'Position', tickmode: 'array', tickvals: Array.from({length: gameState.n}, (_, i) => i + 1) },
-        yaxis: { title: 'String Index', tickmode: 'array', tickvals: Array.from({length: allStrings.length}, (_, i) => i) }
+        xaxis: { 
+          title: 'Position',
+          tickmode: 'array',
+          tickvals: Array.from({length: gameState.n}, (_, i) => i + 1)
+        },
+        yaxis: { 
+          title: 'String Index',
+          tickmode: 'array',
+          tickvals: Array.from({length: allStrings.length}, (_, i) => i),
+          ticktext: allStrings,
+          side: 'left'
+        },
+        shapes: [{
+          type: 'line',
+          x0: 0.5,
+          x1: gameState.n + 0.5,
+          y0: halfway - 0.5,
+          y1: halfway - 0.5,
+          line: {
+            color: 'black',
+            width: 2,
+            dash: 'dash'
+          }
+        }],
+        annotations: [
+          {
+            x: 0,
+            y: halfway/2,
+            text: 'Even Parity',
+            showarrow: false,
+            xanchor: 'right',
+            xref: 'paper',
+            yref: 'y'
+          },
+          {
+            x: 0,
+            y: halfway + halfway/2,
+            text: 'Odd Parity',
+            showarrow: false,
+            xanchor: 'right',
+            xref: 'paper',
+            yref: 'y'
+          }
+        ]
       };
 
       Plotly.newPlot('heatmap', data, layout);
