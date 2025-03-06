@@ -2,193 +2,259 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Soma Cube Interactive Solver</title>
+  <title>3D Soma Cube Interactive Solver</title>
   <style>
-    body { font-family: sans-serif; margin: 20px; }
-    h1, h2 { color: #333; }
-    button { margin: 2px; padding: 5px 10px; }
-    table { border-collapse: collapse; margin-bottom: 10px; }
-    td { width: 40px; height: 40px; border: 1px solid #000; text-align: center; vertical-align: middle; cursor: pointer; }
-    caption { font-weight: bold; margin-bottom: 5px; }
-    #pieces button.selected { background-color: #ddd; }
-    #log { background: #f4f4f4; padding: 10px; max-height: 300px; overflow: auto; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #container {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    #boardContainer, #piecesContainer {
+      border: 1px solid #ccc;
+    }
+    #boardContainer {
+      width: 600px;
+      height: 600px;
+      margin-right: 20px;
+    }
+    #piecesContainer {
+      width: 300px;
+      height: 600px;
+    }
+    #log {
+      width: 920px;
+      background: #f4f4f4;
+      padding: 10px;
+      max-height: 200px;
+      overflow: auto;
+      white-space: pre-wrap;
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 5px 10px;
+    }
   </style>
 </head>
 <body>
-  <h1>Soma Cube Interactive Solver</h1>
-
-  <div id="pieceSelector">
-    <h2>Available Pieces</h2>
-    <div id="pieces"></div>
+  <h1>3D Soma Cube Interactive Solver</h1>
+  <div id="container">
+    <div id="boardContainer"></div>
+    <div id="piecesContainer"></div>
   </div>
+  <button id="undoBtn">Undo Last Move</button>
+  <div id="log"></div>
 
-  <div id="board">
-    <h2>Board (3 Layers)</h2>
-    <div id="layers"></div>
-  </div>
-
-  <button id="undo">Undo Last Move</button>
-
-  <h2>Action Log (JSON)</h2>
-  <pre id="log"></pre>
-
+  <!-- Three.js and OrbitControls from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script>
-    // --- Define the Soma Cube Pieces ---
-    // Each piece is defined by an id and its cubes (using default orientation).
-    const pieces = [
-      {id: 'A', cubes: [[0,0,0], [1,0,0], [0,1,0], [0,0,1]]},
-      {id: 'B', cubes: [[0,0,0], [1,0,0], [2,0,0], [1,1,0]]},
-      {id: 'C', cubes: [[0,0,0], [0,1,0], [1,1,0], [1,1,1]]},
-      {id: 'D', cubes: [[0,0,0], [1,0,0], [1,1,0], [1,0,1]]},
-      {id: 'E', cubes: [[0,0,0], [0,1,0], [0,1,1], [1,1,0]]},
-      {id: 'F', cubes: [[0,0,0], [1,0,0], [0,1,0]]}, // 3-cube piece
-      {id: 'G', cubes: [[0,0,0], [1,0,0], [0,1,0], [1,1,0]]}
-    ];
-
-    // --- Grid Setup (3x3x3) ---
+    // === Global Variables & Data Structures ===
     const GRID_SIZE = 3;
-    let grid = [];
+    // 3x3x3 occupancy grid (null means empty)
+    let boardGrid = [];
     for (let x = 0; x < GRID_SIZE; x++) {
-      grid[x] = [];
+      boardGrid[x] = [];
       for (let y = 0; y < GRID_SIZE; y++) {
-        grid[x][y] = [];
+        boardGrid[x][y] = [];
         for (let z = 0; z < GRID_SIZE; z++) {
-          grid[x][y][z] = null;
+          boardGrid[x][y][z] = null;
         }
       }
     }
-
-    // --- Global Variables ---
-    let selectedPiece = null;
-    let availablePieces = [...pieces];  // Pieces yet to be placed
-    let moveHistory = [];                // To support undo/backtracking
-    let dataLog = [];                    // To log all user actions
-
-    // Log an event with a timestamp
+    // Define the Soma pieces (default orientations only)
+    const pieces = [
+      { id: 'A', cubes: [[0,0,0], [1,0,0], [0,1,0], [0,0,1]] },
+      { id: 'B', cubes: [[0,0,0], [1,0,0], [2,0,0], [1,1,0]] },
+      { id: 'C', cubes: [[0,0,0], [0,1,0], [1,1,0], [1,1,1]] },
+      { id: 'D', cubes: [[0,0,0], [1,0,0], [1,1,0], [1,0,1]] },
+      { id: 'E', cubes: [[0,0,0], [0,1,0], [0,1,1], [1,1,0]] },
+      { id: 'F', cubes: [[0,0,0], [1,0,0], [0,1,0]] },
+      { id: 'G', cubes: [[0,0,0], [1,0,0], [0,1,0], [1,1,0]] }
+    ];
+    // Assign unique colors to each piece
+    const pieceColors = {
+      'A': 0xff0000,  // red
+      'B': 0x00ff00,  // green
+      'C': 0x0000ff,  // blue
+      'D': 0xffff00,  // yellow
+      'E': 0xffa500,  // orange
+      'F': 0x800080,  // purple
+      'G': 0x00ffff   // cyan
+    };
+    // Available pieces for placement (initially, all pieces)
+    let availablePieces = pieces.slice();
+    // Move history for undo/backtracking
+    let moveHistory = [];
+    // Data log array
+    let dataLog = [];
     function logEvent(event) {
       event.timestamp = new Date().toISOString();
       dataLog.push(event);
-      updateLogDisplay();
-    }
-
-    // --- UI Updates ---
-    function updateLogDisplay() {
       document.getElementById('log').textContent = JSON.stringify(dataLog, null, 2);
     }
 
-    // Display available pieces as buttons
-    function updatePiecesDisplay() {
-      const piecesDiv = document.getElementById('pieces');
-      piecesDiv.innerHTML = '';
-      availablePieces.forEach(piece => {
-        const btn = document.createElement('button');
-        btn.textContent = piece.id;
-        btn.onclick = function() {
-          selectedPiece = piece;
-          logEvent({ type: 'select', piece: piece.id });
-          // Highlight the selected piece
-          Array.from(piecesDiv.children).forEach(child => child.classList.remove('selected'));
-          btn.classList.add('selected');
-        };
-        piecesDiv.appendChild(btn);
+    // === Set Up Two Scenes: One for the Board, One for the Pieces ===
+    const boardContainer = document.getElementById("boardContainer");
+    const piecesContainer = document.getElementById("piecesContainer");
+
+    // ---- Board Scene ----
+    const boardScene = new THREE.Scene();
+    boardScene.background = new THREE.Color(0xffffff);
+    const boardCamera = new THREE.PerspectiveCamera(45, boardContainer.clientWidth / boardContainer.clientHeight, 0.1, 1000);
+    boardCamera.position.set(5, 5, 5);
+    boardCamera.lookAt(new THREE.Vector3(1.5, 1.5, 1.5));
+    const boardRenderer = new THREE.WebGLRenderer({antialias: true});
+    boardRenderer.setSize(boardContainer.clientWidth, boardContainer.clientHeight);
+    boardContainer.appendChild(boardRenderer.domElement);
+    const boardControls = new THREE.OrbitControls(boardCamera, boardRenderer.domElement);
+
+    // Create a wireframe cell for each grid cell
+    const cellGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const cellMaterial = new THREE.MeshBasicMaterial({color: 0xcccccc, wireframe: true});
+    for (let x = 0; x < GRID_SIZE; x++) {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let z = 0; z < GRID_SIZE; z++) {
+          const cell = new THREE.Mesh(cellGeometry, cellMaterial);
+          cell.position.set(x + 0.5, y + 0.5, z + 0.5);
+          boardScene.add(cell);
+        }
+      }
+    }
+    // Add lights to the board scene
+    boardScene.add(new THREE.AmbientLight(0x404040));
+    const boardLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    boardLight.position.set(5, 5, 5);
+    boardScene.add(boardLight);
+
+    // ---- Pieces Scene (Always visible) ----
+    const piecesScene = new THREE.Scene();
+    piecesScene.background = new THREE.Color(0xffffff);
+    const piecesCamera = new THREE.PerspectiveCamera(45, piecesContainer.clientWidth / piecesContainer.clientHeight, 0.1, 1000);
+    piecesCamera.position.set(3, 3, 3);
+    piecesCamera.lookAt(new THREE.Vector3(0, 0, 0));
+    const piecesRenderer = new THREE.WebGLRenderer({antialias: true});
+    piecesRenderer.setSize(piecesContainer.clientWidth, piecesContainer.clientHeight);
+    piecesContainer.appendChild(piecesRenderer.domElement);
+    const piecesControls = new THREE.OrbitControls(piecesCamera, piecesRenderer.domElement);
+    // Add lights to the pieces scene
+    piecesScene.add(new THREE.AmbientLight(0x404040));
+    const piecesLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    piecesLight.position.set(5, 5, 5);
+    piecesScene.add(piecesLight);
+
+    // === Helper: Create a 3D Group for a Piece ===
+    function createPieceGroup(piece) {
+      const group = new THREE.Group();
+      const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const color = pieceColors[piece.id] || 0x999999;
+      const cubeMaterial = new THREE.MeshLambertMaterial({color: color});
+      piece.cubes.forEach(cubePos => {
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.position.set(cubePos[0], cubePos[1], cubePos[2]);
+        group.add(cube);
+      });
+      // Center the group by computing its bounding box
+      const box = new THREE.Box3().setFromObject(group);
+      const center = box.getCenter(new THREE.Vector3());
+      group.position.sub(center);
+      return group;
+    }
+
+    // For the pieces scene, display all available pieces in a vertical list.
+    let piecesGroups = {}; // Map piece id to its group in the scene.
+    function updatePiecesScene() {
+      // Remove old groups (if any) but leave lights intact.
+      for (let i = piecesScene.children.length - 1; i >= 0; i--) {
+        const obj = piecesScene.children[i];
+        if (obj.type === "Group") {
+          piecesScene.remove(obj);
+        }
+      }
+      const spacing = 3;
+      availablePieces.forEach((piece, index) => {
+        const group = createPieceGroup(piece);
+        // Position pieces vertically (from top down)
+        group.position.set(0, (availablePieces.length - 1 - index) * spacing, 0);
+        group.userData = { pieceId: piece.id };
+        piecesScene.add(group);
+        piecesGroups[piece.id] = group;
       });
     }
+    updatePiecesScene();
 
-    // Display the 3 layers of the board
-    function updateBoardDisplay() {
-      const layersDiv = document.getElementById('layers');
-      layersDiv.innerHTML = '';
-      for (let z = 0; z < GRID_SIZE; z++) {
-        let table = document.createElement('table');
-        let caption = document.createElement('caption');
-        caption.textContent = 'Layer ' + z;
-        table.appendChild(caption);
-        for (let y = 0; y < GRID_SIZE; y++) {
-          let tr = document.createElement('tr');
-          for (let x = 0; x < GRID_SIZE; x++) {
-            let td = document.createElement('td');
-            td.textContent = grid[x][y][z] ? grid[x][y][z] : '';
-            // On clicking a cell, try to place the selected piece with its base orientation
-            td.onclick = function() {
-              if (selectedPiece) {
-                // Use the clicked cell as the base position for the piece
-                if (canPlace(selectedPiece.cubes, [x, y, z])) {
-                  placePiece(selectedPiece, selectedPiece.cubes, [x, y, z]);
-                  // Remove piece from available list and clear selection
-                  availablePieces = availablePieces.filter(p => p.id !== selectedPiece.id);
-                  selectedPiece = null;
-                  updatePiecesDisplay();
-                  updateBoardDisplay();
-                } else {
-                  alert('Cannot place piece ' + selectedPiece.id + ' at (' + x + ',' + y + ',' + z + ')');
-                }
-              } else {
-                alert('Please select a piece first.');
-              }
-            };
-            tr.appendChild(td);
-          }
-          table.appendChild(tr);
-        }
-        layersDiv.appendChild(table);
+    // === Raycasters for Interaction ===
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    // Selected piece from the available pieces
+    let selectedPiece = null;
+
+    // --- Piece Selection: Click on the Pieces Canvas ---
+    piecesRenderer.domElement.addEventListener('click', (event) => {
+      const rect = piecesRenderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, piecesCamera);
+      const intersects = raycaster.intersectObjects(piecesScene.children, true);
+      if (intersects.length > 0) {
+        const pieceId = intersects[0].object.parent.userData.pieceId;
+        selectedPiece = availablePieces.find(p => p.id === pieceId);
+        logEvent({ type: 'select', piece: pieceId });
       }
-    }
+    });
 
-    // --- Placement Logic ---
-    // Check if a piece (with a given orientation) can be placed at the given base position.
-    function canPlace(orientation, pos) {
-      for (let cube of orientation) {
-        let x = pos[0] + cube[0];
-        let y = pos[1] + cube[1];
-        let z = pos[2] + cube[2];
-        if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE || z < 0 || z >= GRID_SIZE) return false;
-        if (grid[x][y][z] !== null) return false;
-      }
-      return true;
-    }
-
-    // Place a piece on the grid and log the event.
-    function placePiece(piece, orientation, pos) {
-      for (let cube of orientation) {
-        let x = pos[0] + cube[0];
-        let y = pos[1] + cube[1];
-        let z = pos[2] + cube[2];
-        grid[x][y][z] = piece.id;
-      }
-      moveHistory.push({ piece: piece, pos: pos, orientation: orientation });
-      logEvent({ type: 'place', piece: piece.id, position: pos, orientation: orientation });
-    }
-
-    // Undo the last move (simulate backtracking) and log the event.
-    function undoLastMove() {
-      if (moveHistory.length === 0) {
-        alert('No moves to undo.');
+    // --- Board Interaction: Place the Selected Piece ---
+    boardRenderer.domElement.addEventListener('click', (event) => {
+      if (!selectedPiece) {
+        alert("Select a piece from the available pieces first.");
         return;
       }
-      const lastMove = moveHistory.pop();
-      const piece = lastMove.piece;
-      const pos = lastMove.pos;
-      const orientation = lastMove.orientation;
-      for (let cube of orientation) {
-        let x = pos[0] + cube[0];
-        let y = pos[1] + cube[1];
-        let z = pos[2] + cube[2];
-        grid[x][y][z] = null;
-      }
-      // Add the piece back to available pieces
-      availablePieces.push(piece);
-      logEvent({ type: 'undo', piece: piece.id, position: pos, orientation: orientation });
-      updatePiecesDisplay();
-      updateBoardDisplay();
-    }
-
-    // --- Event Listeners ---
-    document.getElementById('undo').onclick = undoLastMove;
-
-    // --- Initialize the Interface ---
-    updatePiecesDisplay();
-    updateBoardDisplay();
-    updateLogDisplay();
-  </script>
-</body>
-</html>
+      const rect = boardRenderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, boardCamera);
+      const intersects = raycaster.intersectObjects(boardScene.children, true);
+      if (intersects.length > 0) {
+        // Determine the clicked cell (cells are drawn with center at (x+0.5, y+0.5, z+0.5))
+        const pos = intersects[0].point;
+        const cellX = Math.floor(pos.x);
+        const cellY = Math.floor(pos.y);
+        const cellZ = Math.floor(pos.z);
+        // Check placement validity for each cube of the piece.
+        let valid = true;
+        selectedPiece.cubes.forEach(cube => {
+          const x = cellX + cube[0];
+          const y = cellY + cube[1];
+          const z = cellZ + cube[2];
+          if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE || z < 0 || z >= GRID_SIZE || boardGrid[x][y][z] !== null) {
+            valid = false;
+          }
+        });
+        if (!valid) {
+          alert("Cannot place piece here.");
+          return;
+        }
+        // Place the piece: update boardGrid and add its 3D group to boardScene.
+        const pieceGroup = createPieceGroup(selectedPiece);
+        pieceGroup.position.set(cellX, cellY, cellZ);
+        boardScene.add(pieceGroup);
+        selectedPiece.cubes.forEach(cube => {
+          const x = cellX + cube[0];
+          const y = cellY + cube[1];
+          const z = cellZ + cube[2];
+          boardGrid[x][y][z] = selectedPiece.id;
+        });
+        moveHistory.push({ piece: selectedPiece, position: [cellX, cellY, cellZ], group: pieceGroup });
+        logEvent({ type: 'place', piece: selectedPiece
