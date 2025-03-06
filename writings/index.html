@@ -104,6 +104,7 @@
       event.timestamp = new Date().toISOString();
       dataLog.push(event);
       document.getElementById('log').textContent = JSON.stringify(dataLog, null, 2);
+      console.log(event);
     }
 
     // === Set Up Two Scenes: One for the Board, One for the Pieces ===
@@ -170,6 +171,8 @@
       const box = new THREE.Box3().setFromObject(group);
       const center = box.getCenter(new THREE.Vector3());
       group.position.sub(center);
+      // Store the piece id in userData for selection
+      group.userData = { pieceId: piece.id };
       return group;
     }
 
@@ -188,7 +191,7 @@
         const group = createPieceGroup(piece);
         // Position pieces vertically (from top down)
         group.position.set(0, (availablePieces.length - 1 - index) * spacing, 0);
-        group.userData = { pieceId: piece.id };
+        group.userData = { pieceId: piece.id }; // Ensure userData is set
         piecesScene.add(group);
         piecesGroups[piece.id] = group;
       });
@@ -209,9 +212,18 @@
       raycaster.setFromCamera(mouse, piecesCamera);
       const intersects = raycaster.intersectObjects(piecesScene.children, true);
       if (intersects.length > 0) {
-        const pieceId = intersects[0].object.parent.userData.pieceId;
-        selectedPiece = availablePieces.find(p => p.id === pieceId);
-        logEvent({ type: 'select', piece: pieceId });
+        // Traverse up to find the group with userData.pieceId
+        let selectedObj = intersects[0].object;
+        while (selectedObj && !selectedObj.userData.pieceId && selectedObj.parent) {
+          selectedObj = selectedObj.parent;
+        }
+        if (selectedObj && selectedObj.userData && selectedObj.userData.pieceId) {
+          const pieceId = selectedObj.userData.pieceId;
+          selectedPiece = availablePieces.find(p => p.id === pieceId);
+          logEvent({ type: 'select', piece: pieceId });
+        } else {
+          console.warn("No valid piece found in selection.");
+        }
       }
     });
 
