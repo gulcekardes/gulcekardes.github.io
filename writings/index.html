@@ -257,4 +257,43 @@
           boardGrid[x][y][z] = selectedPiece.id;
         });
         moveHistory.push({ piece: selectedPiece, position: [cellX, cellY, cellZ], group: pieceGroup });
-        logEvent({ type: 'place', piece: selectedPiece
+        logEvent({ type: 'place', piece: selectedPiece.id, position: [cellX, cellY, cellZ] });
+        // Remove the placed piece from availablePieces and update the pieces scene.
+        availablePieces = availablePieces.filter(p => p.id !== selectedPiece.id);
+        updatePiecesScene();
+        selectedPiece = null;
+      }
+    });
+
+    // --- Undo Functionality ---
+    document.getElementById("undoBtn").addEventListener("click", () => {
+      if (moveHistory.length === 0) {
+        alert("No moves to undo.");
+        return;
+      }
+      const lastMove = moveHistory.pop();
+      boardScene.remove(lastMove.group);
+      // Clear the cells occupied by that piece
+      lastMove.piece.cubes.forEach(cube => {
+        const x = lastMove.position[0] + cube[0];
+        const y = lastMove.position[1] + cube[1];
+        const z = lastMove.position[2] + cube[2];
+        boardGrid[x][y][z] = null;
+      });
+      availablePieces.push(lastMove.piece);
+      updatePiecesScene();
+      logEvent({ type: 'undo', piece: lastMove.piece.id, position: lastMove.position });
+    });
+
+    // --- Animation Loop for Both Renderers ---
+    function animate() {
+      requestAnimationFrame(animate);
+      boardControls.update();
+      piecesControls.update();
+      boardRenderer.render(boardScene, boardCamera);
+      piecesRenderer.render(piecesScene, piecesCamera);
+    }
+    animate();
+  </script>
+</body>
+</html>
