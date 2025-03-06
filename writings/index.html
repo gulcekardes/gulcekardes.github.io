@@ -1,1 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Soma Cube Interactive Solver</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    h1, h2 { color: #333; }
+    button { margin: 2px; padding: 5px 10px; }
+    table { border-collapse: collapse; margin-bottom: 10px; }
+    td { width: 40px; height: 40px; border: 1px solid #000; text-align: center; vertical-align: middle; cursor: pointer; }
+    caption { font-weight: bold; margin-bottom: 5px; }
+    #pieces button.selected { background-color: #ddd; }
+    #log { background: #f4f4f4; padding: 10px; max-height: 300px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Soma Cube Interactive Solver</h1>
 
+  <div id="pieceSelector">
+    <h2>Available Pieces</h2>
+    <div id="pieces"></div>
+  </div>
+
+  <div id="board">
+    <h2>Board (3 Layers)</h2>
+    <div id="layers"></div>
+  </div>
+
+  <button id="undo">Undo Last Move</button>
+
+  <h2>Action Log (JSON)</h2>
+  <pre id="log"></pre>
+
+  <script>
+    // --- Define the Soma Cube Pieces ---
+    // Each piece is defined by an id and its cubes (using default orientation).
+    const pieces = [
+      {id: 'A', cubes: [[0,0,0], [1,0,0], [0,1,0], [0,0,1]]},
+      {id: 'B', cubes: [[0,0,0], [1,0,0], [2,0,0], [1,1,0]]},
+      {id: 'C', cubes: [[0,0,0], [0,1,0], [1,1,0], [1,1,1]]},
+      {id: 'D', cubes: [[0,0,0], [1,0,0], [1,1,0], [1,0,1]]},
+      {id: 'E', cubes: [[0,0,0], [0,1,0], [0,1,1], [1,1,0]]},
+      {id: 'F', cubes: [[0,0,0], [1,0,0], [0,1,0]]}, // 3-cube piece
+      {id: 'G', cubes: [[0,0,0], [1,0,0], [0,1,0], [1,1,0]]}
+    ];
+
+    // --- Grid Setup (3x3x3) ---
+    const GRID_SIZE = 3;
+    let grid = [];
+    for (let x = 0; x < GRID_SIZE; x++) {
+      grid[x] = [];
+      for (let y = 0; y < GRID_SIZE; y++) {
+        grid[x][y] = [];
+        for (let z = 0; z < GRID_SIZE; z++) {
+          grid[x][y][z] = null;
+        }
+      }
+    }
+
+    // --- Global Variables ---
+    let selectedPiece = null;
+    let availablePieces = [...pieces];  // Pieces yet to be placed
+    let moveHistory = [];                // To support undo/backtracking
+    let dataLog = [];                    // To log all user actions
+
+    // Log an event with a timestamp
+    function logEvent(event) {
+      event.timestamp = new Date().toISOString();
+      dataLog.push(event);
+      updateLogDisplay();
+    }
+
+    // --- UI Updates ---
+    function updateLogDisplay() {
+      document.getElementById('log').textContent = JSON.stringify(dataLog, null, 2);
+    }
+
+    // Display available pieces as buttons
+    function updatePiecesDisplay() {
+      const piecesDiv = document.getElementById('pieces');
+      piecesDiv.innerHTML = '';
+      availablePieces.forEach(piece => {
+        const btn = document.createElement('button');
+        btn.textContent = piece.id;
+        btn.onclick = function() {
+          selectedPiece = piece;
+          logEvent({ type: 'select', piece: piece.id });
+          // Highlight the selected piece
+          Array.from(piecesDiv.children).forEach(child => child.classList.remove('selected'));
+          btn.classList.add('selected');
+        };
+        piecesDiv.appendChild(btn);
+      });
+    }
+
+    // Display the 3 layers of the board
+    function updateBoardDisplay() {
+      const layersDiv = document.getElementById('layers');
+      layersDiv.innerHTML = '';
+      for (let z = 0; z < GRID_SIZE; z++) {
+        let table = document.createElement('table');
+        let caption = document.createElement('caption');
+        caption.textContent = 'Layer ' + z;
+        table.appendChild(caption);
+        for (let y = 0; y < GRID_SIZE; y++) {
+          let tr = document.createElement('tr');
+          for (let x = 0; x < GRID_SIZE; x++) {
+            let td = document.createElement('td');
+            td.textContent = grid[x][y][z] ? grid[x][y][z] : '';
+            // On clicking a cell, try to place the selected piece with its base orientation
+            td.onclick = function() {
+              if (selectedPiece) {
+                // Use the clicked cell as the base position for the piece
+                if (canPlace(selectedPiece.cubes, [x, y, z])) {
+                  placePiece(selectedPiece, selectedPiece.cubes, [x, y, z]);
+                  // Remove piece from available list and clear selection
+                  availablePieces = availablePieces.filter(p => p.id !== selectedPiece.id);
+                  selectedPiece = null;
+                  updatePiecesDisplay();
+                  updateBoardDisplay();
+                } else {
+                  alert('Cannot place piece ' + selectedPiece.id + ' at (' + x + ',' + y + ',' + z + ')');
+                }
+              } else {
+                alert('Please select a piece first.');
+              }
+            };
+            tr.appendChild(td);
+          }
+          table.appendChild(tr);
+        }
+        layersDiv.appendChild(table);
+      }
+    }
+
+    // --- Placement Logic ---
+    // Check if a piece (with a given orientation) can be placed at the given base position.
+    function canPlace(orientation, pos) {
+      for (let cube of orientation) {
+        let x = pos[0] + cube[0];
+        let y = pos[1] + cube[1];
+        let z = pos[2] + cube[2];
+        if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE || z < 0 || z >= GRID_SIZE) return false;
+        if (grid[x][y][z] !== null) return false;
+      }
+      return true;
+    }
+
+    // Place a piece on the grid and log the event.
+    function placePiece(piece, orientation, pos) {
+      for (let cube of orientation) {
+        let x = pos[0] + cube[0];
+        let y = pos[1] + cube[1];
+        let z = pos[2] + cube[2];
+        grid[x][y][z] = piece.id;
+      }
+      moveHistory.push({ piece: piece, pos: pos, orientation: orientation });
+      logEvent({ type: 'place', piece: piece.id, position: pos, orientation: orientation });
+    }
+
+    // Undo the last move (simulate backtracking) and log the event.
+    function undoLastMove() {
+      if (moveHistory.length === 0) {
+        alert('No moves to undo.');
+        return;
+      }
+      const lastMove = moveHistory.pop();
+      const piece = lastMove.piece;
+      const pos = lastMove.pos;
+      const orientation = lastMove.orientation;
+      for (let cube of orientation) {
+        let x = pos[0] + cube[0];
+        let y = pos[1] + cube[1];
+        let z = pos[2] + cube[2];
+        grid[x][y][z] = null;
+      }
+      // Add the piece back to available pieces
+      availablePieces.push(piece);
+      logEvent({ type: 'undo', piece: piece.id, position: pos, orientation: orientation });
+      updatePiecesDisplay();
+      updateBoardDisplay();
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('undo').onclick = undoLastMove;
+
+    // --- Initialize the Interface ---
+    updatePiecesDisplay();
+    updateBoardDisplay();
+    updateLogDisplay();
+  </script>
+</body>
+</html>
