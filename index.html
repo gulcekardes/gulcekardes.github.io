@@ -66,11 +66,6 @@
           display: block;
           margin-bottom: 5px;
       }
-      .art-caption {
-          text-align: center;
-          font-size: 0.9em;
-          color: #666;
-      }
       .text-content {
           margin-left: 320px;
       }
@@ -81,14 +76,6 @@
           margin: 20px 0;
           display: block;
           clear: both;
-      }
-      .blog-post {
-          margin-bottom: 3rem;
-          border-bottom: 1px solid #eee;
-          padding-bottom: 2rem;
-      }
-      .blog-post:last-child {
-          border-bottom: none;
       }
       .post-title {
           font-family: 'Palatino', serif;
@@ -107,7 +94,6 @@
           width: 100%;
           border-top: 1px solid #eee;
       }
-      /* Your name now in Volkorn, with Mate as fallback */
       h1 {
           font-family: 'Volkorn', 'Mate', serif;
           margin: 0;
@@ -124,53 +110,21 @@
           clear: both;
           display: table;
       }
-
-      /* Mobile Responsive Styles */
       @media screen and (max-width: 768px) {
-          body {
-              font-size: 11pt;
-          }
-          .container {
-              padding: 0 15px;
-          }
-          .art-section {
-              float: none;
-              width: 100%;
-              max-width: 400px;
-              margin: 0 auto 20px;
-          }
-          .text-content {
-              margin-left: 0;
-              clear: both;
-          }
-          h1 {
-              font-size: 2rem;
-          }
-          .post-title {
-              font-size: 1.1rem;
-          }
+          body { font-size: 11pt; }
+          .container { padding: 0 15px; }
+          .art-section { float: none; width: 100%; max-width: 400px; margin: 0 auto 20px; }
+          .text-content { margin-left: 0; clear: both; }
+          h1 { font-size: 2rem; }
+          .post-title { font-size: 1.1rem; }
       }
-
       @media screen and (max-width: 480px) {
-          header {
-              padding: 1rem 0.5rem 0.5rem;
-          }
-          h1 {
-              font-size: 1.8rem;
-          }
-          .container {
-              padding: 0 10px;
-          }
-          body {
-              padding-bottom: 50px;
-          }
-          footer {
-              padding: 0.5rem;
-          }
-          .nav-links a {
-              display: block;
-              margin: 5px 0;
-          }
+          header { padding: 1rem 0.5rem 0.5rem; }
+          h1 { font-size: 1.8rem; }
+          .container { padding: 0 10px; }
+          body { padding-bottom: 50px; }
+          footer { padding: 0.5rem; }
+          .nav-links a { display: block; margin: 5px 0; }
       }
   </style>
   <script>
@@ -178,7 +132,7 @@
           document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
           document.getElementById(sectionId).classList.add('active');
           document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
-          document.querySelector(`[data-section="${sectionId}"]`).classList.add('active');
+          document.querySelector(`[data-section="${sectionId}"]`)?.classList.add('active');
       }
       window.onload = () => showSection('home');
   </script>
@@ -189,7 +143,6 @@
       <div class="nav-links">
           <a href="#" data-section="home" class="active" onclick="showSection('home')">Home</a>
           <a href="https://scholar.google.com/citations?user=-io3rR0AAAAJ">Google Scholar</a>
-          <a href="#" data-section="thoughts" onclick="showSection('thoughts')">Thoughts</a>
       </div>
   </header>
   <div class="container">
@@ -202,17 +155,6 @@
               <p>Currently I am working on circuit complexity and communication games lower bounds using algebraic, analytical, and combinatorial methods. Prior to my PhD, I received my BSc in physics in 2022 from University of Leipzig, and did work on thermodynamics of computation beyond bit erasure.</p>
           </div>
           <img src="hein.jpg" alt="" class="bottom-image" />
-      </div>
-      <div id="thoughts" class="section">
-          <div class="blog-post">
-              <h2 class="post-title"><a href="https://gulcekardes.github.io/research" style="text-decoration: none; color: inherit;">Research</a></h2>
-          </div>
-          <div class="blog-post">
-              <h2 class="post-title"><a href="https://gulcekardes.github.io/writings" style="text-decoration: none; color: inherit;">Writings on Combinatorics and Complexity</a></h2>
-          </div>
-          <div class="blog-post">
-              <h2 class="post-title"><a href="https://gulcekardes.github.io/multifarious" style="text-decoration: none; color: inherit;">Miscellaneous</a></h2>
-          </div>
       </div>
   </div>
   <footer>
