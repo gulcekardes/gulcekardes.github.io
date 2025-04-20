@@ -36,6 +36,8 @@
           font-family: 'Palatino', serif;
           margin: 0 10px;
           cursor: pointer;
+          font-size: 1.2rem;      /* increased size */
+          color: navy;            /* navy blue links */
       }
       .nav-links a:hover {
           text-decoration: underline;
@@ -48,6 +50,7 @@
           margin: 0 auto;
           padding: 0 1rem;
           background-color: white;
+          text-align: center;    /* center text content */
       }
       .section {
           display: none;
@@ -55,27 +58,8 @@
       .section.active {
           display: block;
       }
-      .art-section {
-          float: left;
-          width: 300px;
-          margin: 0 20px 20px 0;
-      }
-      .art-section img {
-          width: 100%;
-          height: auto;
-          display: block;
-          margin-bottom: 5px;
-      }
       .text-content {
-          margin-left: 320px;
-      }
-      .bottom-image {
-          width: 100%;
-          max-width: 800px;
-          height: auto;
-          margin: 20px 0;
-          display: block;
-          clear: both;
+          margin: 0 auto;
       }
       .post-title {
           font-family: 'Palatino', serif;
@@ -113,8 +97,6 @@
       @media screen and (max-width: 768px) {
           body { font-size: 11pt; }
           .container { padding: 0 15px; }
-          .art-section { float: none; width: 100%; max-width: 400px; margin: 0 auto 20px; }
-          .text-content { margin-left: 0; clear: both; }
           h1 { font-size: 2rem; }
           .post-title { font-size: 1.1rem; }
       }
@@ -147,14 +129,10 @@
   </header>
   <div class="container">
       <div id="home" class="section active clearfix">
-          <div class="art-section">
-              <img src="alan.jpg.png" alt="Stefan Bertalan artwork" />
-          </div>
           <div class="text-content">
               <p>I am a PhD student in theoretical computer science at the University of Colorado, Boulder, where I am advised by Joshua Grochow and Rafael Frongillo. I am also a Graduate Fellow at the Santa Fe Institute. My research focuses on understanding which problems can be solved efficiently across different models of computation, and what structural properties make certain problems fundamentally hard.</p>
               <p>Currently I am working on circuit complexity and communication games lower bounds using algebraic, analytical, and combinatorial methods. Prior to my PhD, I received my BSc in physics in 2022 from University of Leipzig, and did work on thermodynamics of computation beyond bit erasure.</p>
           </div>
-          <img src="hein.jpg" alt="" class="bottom-image" />
       </div>
   </div>
   <footer>
