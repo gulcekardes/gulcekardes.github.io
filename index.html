@@ -1,12 +1,12 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gülce Kardeş - Personal Website</title>
+  <title>Gülce Kardeş – Home</title>
   <!-- Google Fonts: Volkorn & Mate -->
   <link href="https://fonts.googleapis.com/css2?family=Volkorn:wght@400;700&family=Mate:wght@400;700&display=swap" rel="stylesheet">
-
   <style>
       body {
           font-family: 'Palatino', serif;
@@ -24,7 +24,6 @@
           color: #2c3e50;
           text-align: center;
           padding: 2rem 1rem 1rem;
-          position: relative;
           max-width: 800px;
           margin: 0 auto;
       }
@@ -36,8 +35,8 @@
           font-family: 'Palatino', serif;
           margin: 0 10px;
           cursor: pointer;
-          font-size: 1.2rem;      /* increased size */
-          color: navy;            /* navy blue links */
+          font-size: 1.2rem;
+          color: navy;
       }
       .nav-links a:hover {
           text-decoration: underline;
@@ -50,21 +49,11 @@
           margin: 0 auto;
           padding: 0 1rem;
           background-color: white;
-          text-align: center;    /* center text content */
-      }
-      .section {
-          display: none;
-      }
-      .section.active {
-          display: block;
-      }
-      .text-content {
-          margin: 0 auto;
+          text-align: center;
       }
       .post-title {
           font-family: 'Palatino', serif;
           font-size: 1.2rem;
-          font-weight: normal; 
           margin: 0.5rem 0;
           color: #2c3e50;
       }
@@ -89,11 +78,6 @@
       p {
           margin-bottom: 1.5rem;
       }
-      .clearfix::after {
-          content: "";
-          clear: both;
-          display: table;
-      }
       @media screen and (max-width: 768px) {
           body { font-size: 11pt; }
           .container { padding: 0 15px; }
@@ -109,30 +93,20 @@
           .nav-links a { display: block; margin: 5px 0; }
       }
   </style>
-  <script>
-      function showSection(sectionId) {
-          document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-          document.getElementById(sectionId).classList.add('active');
-          document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
-          document.querySelector(`[data-section="${sectionId}"]`)?.classList.add('active');
-      }
-      window.onload = () => showSection('home');
-  </script>
 </head>
 <body>
   <header>
       <h1>Gülce Kardeş</h1>
       <div class="nav-links">
-          <a href="#" data-section="home" class="active" onclick="showSection('home')">Home</a>
+          <a href="index.html" class="active">Home</a>
+          <a href="puzzles.html">Puzzles</a>
           <a href="https://scholar.google.com/citations?user=-io3rR0AAAAJ">Google Scholar</a>
       </div>
   </header>
   <div class="container">
-      <div id="home" class="section active clearfix">
-          <div class="text-content">
-              <p>I am a PhD student in theoretical computer science at the University of Colorado, Boulder, where I am advised by Joshua Grochow and Rafael Frongillo. I am also a Graduate Fellow at the Santa Fe Institute. My research focuses on understanding which problems can be solved efficiently across different models of computation, and what structural properties make certain problems fundamentally hard.</p>
-              <p>Currently I am working on circuit complexity and communication games lower bounds using algebraic, analytical, and combinatorial methods. Prior to my PhD, I received my BSc in physics in 2022 from University of Leipzig, and did work on thermodynamics of computation beyond bit erasure.</p>
-          </div>
+      <div class="text-content">
+          <p>I am a PhD student in theoretical computer science at the University of Colorado, Boulder, where I am advised by Joshua Grochow and Rafael Frongillo. I am also a Graduate Fellow at the Santa Fe Institute. My research focuses on understanding which problems can be solved efficiently across different models of computation, and what structural properties make certain problems fundamentally hard.</p>
+          <p>Currently I am working on circuit complexity and communication games lower bounds using algebraic, analytical, and combinatorial methods. Prior to my PhD, I received my BSc in physics in 2022 from University of Leipzig, and did work on thermodynamics of computation beyond bit erasure.</p>
       </div>
   </div>
   <footer>
