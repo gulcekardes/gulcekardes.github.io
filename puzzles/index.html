@@ -6,8 +6,8 @@
   <title>Gülce Kardeş – Puzzles</title>
   <link href="https://fonts.googleapis.com/css2?family=Volkorn:wght@400;700&family=Mate:wght@400;700&display=swap" rel="stylesheet">
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      margin: 0;
       font-family: Palatino, serif;
       background: #fafafa;
       overflow: hidden;
@@ -24,47 +24,10 @@
       text-decoration: none; font-size: 1.1rem;
     }
     .nav-links a.active { font-weight: bold; }
-
-    /* 3D scene container */
-    #scene {
-      width: 100vw;
-      height: 100vh;
-      perspective: 800px;
-      transform-style: preserve-3d;
-      /* tilt the whole scene for a nice view */
-      transform: rotateX(20deg) rotateY(-30deg);
-    }
-
-    /* each piece is a group of cubes */
-    .piece {
-      position: absolute;
-      transform-style: preserve-3d;
-    }
-
-    /* each cube (one block in a piece) */
-    .cube {
-      position: absolute;
-      width: 50px; height: 50px;
-      transform-style: preserve-3d;
-    }
-
-    /* all six faces */
-    .face {
-      position: absolute;
-      width: 50px; height: 50px;
-      background: inherit;
-      border: 1px solid #333;
-    }
-    .face-front  { transform: translateZ(25px); }
-    .face-back   { transform: rotateY(180deg) translateZ(25px); }
-    .face-right  { transform: rotateY( 90deg) translateZ(25px); }
-    .face-left   { transform: rotateY(-90deg) translateZ(25px); }
-    .face-top    { transform: rotateX( 90deg) translateZ(25px); }
-    .face-bottom { transform: rotateX(-90deg) translateZ(25px); }
+    canvas { display: block; }
   </style>
 </head>
 <body>
-
   <header>
     <div class="nav-links">
       <a href="../index.html">Home</a>
@@ -72,61 +35,110 @@
       <a href="https://scholar.google.com/citations?user=-io3rR0AAAAJ">Google Scholar</a>
     </div>
   </header>
-
-  <div id="scene"></div>
-
+  <canvas id="iso"></canvas>
   <script>
-    // the seven pieces as lists of [x,y,z]
-    const pieces = [
-      [[0,0,0],[0,0,1],[0,1,0]],
-      [[0,0,0],[0,0,1],[0,0,2],[0,1,0]],
-      [[0,0,0],[0,0,1],[0,0,2],[0,1,1]],
-      [[0,0,0],[0,0,1],[0,1,0],[1,0,0]],
-      [[0,0,0],[0,0,1],[0,1,0],[1,0,1]],
-      [[0,0,0],[0,0,1],[0,1,0],[1,1,0]],
-      [[0,0,0],[0,0,1],[0,1,1],[0,1,2]]
-    ];
-    // matching CSS colors
-    const colors = [
-      '#e6194B','#3cb44b','#4363d8',
-      '#f58231','#911eb4','#46f0f0','#f032e6'
-    ];
+  // --- JSON definition of the 7 Soma pieces ---
+  const pieces = [
+    { name: "V", coords:[[0,0,0],[0,0,1],[0,1,0]], color:"#e6194B" },
+    { name: "L", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,0]], color:"#3cb44b" },
+    { name: "T", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,1]], color:"#4363d8" },
+    { name: "Z", coords:[[0,0,0],[0,0,1],[0,1,0],[1,0,0]], color:"#f58231" },
+    { name: "A", coords:[[0,0,0],[0,0,1],[0,1,0],[1,0,1]], color:"#911eb4" },
+    { name: "B", coords:[[0,0,0],[0,0,1],[0,1,0],[1,1,0]], color:"#46f0f0" },
+    { name: "P", coords:[[0,0,0],[0,0,1],[0,1,1],[0,1,2]], color:"#f032e6" }
+  ];
 
-    const scene = document.getElementById('scene');
-    const SIZE = 50;    // one cube = 50px
+  // canvas & context
+  const canvas = document.getElementById("iso");
+  const ctx = canvas.getContext("2d");
 
-    pieces.forEach((coords, i) => {
-      // create piece container
-      const piece = document.createElement('div');
-      piece.className = 'piece';
-      // spread pieces along X for visibility
-      piece.style.transform = `translateX(${i * (SIZE*4)}px)`;
-      scene.appendChild(piece);
+  // isometric tile size
+  const TILE_W = 60, TILE_H = 30;
 
-      coords.forEach(c => {
-        // one cube
-        const cube = document.createElement('div');
-        cube.className = 'cube';
-        cube.style.background = colors[i];
-        // position it within its piece-group
-        cube.style.transform = `
-          translate3d(
-            ${c[0]*SIZE}px,
-            ${c[1]*SIZE}px,
-            ${c[2]*SIZE}px
-          )
-        `;
-        // add its six faces
-        ['front','back','right','left','top','bottom'].forEach(face => {
-          const f = document.createElement('div');
-          f.className = 'face face-' + face;
-          f.style.background = colors[i];
-          cube.appendChild(f);
-        });
-        piece.appendChild(cube);
+  // shading helpers
+  function shade(hex, percent) {
+    const num = parseInt(hex.slice(1),16),
+          r = (num>>16), g=(num>>8)&0xFF, b=num&0xFF,
+          f = percent<0?percent* -1:percent,
+          t = percent<0?0:255;
+    const R = Math.round((t - r)*f) + r,
+          G = Math.round((t - g)*f) + g,
+          B = Math.round((t - b)*f) + b;
+    return `rgb(${R},${G},${B})`;
+  }
+
+  // project 3D xyz -> 2D screen
+  function project(x,y,z){
+    const sx = (x - z)*TILE_W/2;
+    const sy = (x + z)*TILE_H/2 - y*TILE_H;
+    return [sx, sy];
+  }
+
+  // draw one block at grid (gx,gy,gz)
+  function drawBlock(gx,gy,gz, color, offsetX, offsetY){
+    const [px,py] = project(gx,gy,gz);
+    const x = offsetX + px, y = offsetY + py;
+    // top face
+    ctx.fillStyle = shade(color, 0.2);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + TILE_W/2, y + TILE_H/2);
+    ctx.lineTo(x, y + TILE_H);
+    ctx.lineTo(x - TILE_W/2, y + TILE_H/2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // left face
+    ctx.fillStyle = shade(color, -0.1);
+    ctx.beginPath();
+    ctx.moveTo(x - TILE_W/2, y + TILE_H/2);
+    ctx.lineTo(x, y + TILE_H);
+    ctx.lineTo(x, y + TILE_H + TILE_H);
+    ctx.lineTo(x - TILE_W/2, y + TILE_H/2 + TILE_H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // right face
+    ctx.fillStyle = shade(color, -0.2);
+    ctx.beginPath();
+    ctx.moveTo(x + TILE_W/2, y + TILE_H/2);
+    ctx.lineTo(x, y + TILE_H);
+    ctx.lineTo(x, y + TILE_H + TILE_H);
+    ctx.lineTo(x + TILE_W/2, y + TILE_H/2 + TILE_H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // render all pieces
+  function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const margin = 50;
+    pieces.forEach((p, i) => {
+      const baseX = canvas.width/2 - TILE_W + (i-3)*150;
+      const baseY = 150;
+      p.coords.forEach(c => {
+        drawBlock(c[0],c[1],c[2], p.color, baseX, baseY);
       });
+      // piece label
+      ctx.fillStyle = "#333";
+      ctx.font = "bold 16px Palatino, serif";
+      ctx.fillText(p.name, baseX - 10, baseY + 4);
     });
-  </script>
+  }
 
+  // resize & initial draw
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#555";
+    render();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+  </script>
 </body>
 </html>
