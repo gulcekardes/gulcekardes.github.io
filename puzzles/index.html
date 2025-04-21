@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Gülce Kardeş – Soma Cube Solver</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -73,7 +73,7 @@
   pieces.forEach((p,idx)=>{
     const fig = document.createElement("figure");
     const cap = document.createElement("figcaption"); cap.textContent = p.name;
-    const cv = document.createElement("canvas"); cv.className="piece"; cv.width=cv.height=200;
+    const cv = document.createElement("canvas"); cv.className = "piece"; cv.width = cv.height = 200;
     fig.append(cap,cv); piecesDiv.append(fig);
     const ctx = cv.getContext("2d");
 
@@ -101,8 +101,8 @@
             ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
             pts.slice(1).forEach(p2=>ctx.lineTo(p2.x,p2.y));
             ctx.closePath();
-            ctx.fillStyle=shadeColor(p.color,f.shade); ctx.fill();
-            ctx.strokeStyle="#333"; ctx.stroke();
+            ctx.fillStyle = shadeColor(p.color,f.shade); ctx.fill();
+            ctx.strokeStyle = "#333"; ctx.stroke();
           });
         });
     }
@@ -118,6 +118,12 @@
       drawPiece();
     });
     window.addEventListener("mouseup", () => dragging=false);
+
+    // make draggable
+    cv.setAttribute("draggable","true");
+    cv.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", idx);
+    });
 
     cv.addEventListener("click", () => {
       document.querySelectorAll("canvas.piece").forEach(c=>c.classList.remove("selected"));
@@ -164,12 +170,13 @@
         if (occupied[key] != null) return;
         const pts = f.verts.map(v => projectG([d.wx+v[0], d.wy+v[1], d.wz+v[2]]));
         sCtx.beginPath(); sCtx.moveTo(pts[0].x,pts[0].y);
-        pts.slice(1).forEach(p2 => sCtx.lineTo(p2.x,p2.y));
+        pts.slice(1).forEach(p2=>sCtx.lineTo(p2.x,p2.y));
         sCtx.closePath(); sCtx.fillStyle=shadeColor(d.color,f.shade); sCtx.fill(); sCtx.strokeStyle="#333"; sCtx.stroke();
       });
     });
   }
 
+  // rotation of grid
   solver.addEventListener("mousedown", e => { draggingGrid=true; glx=e.clientX; gly=e.clientY; });
   window.addEventListener("mousemove", e => {
     if (!draggingGrid) return;
@@ -180,29 +187,57 @@
   });
   window.addEventListener("mouseup", () => draggingGrid=false);
 
+  // click-to-place support (optional)
   solver.addEventListener("click", e => {
     console.log('solver canvas click event, selected =', selected);
     if (selected == null) return;
     const rect = solver.getBoundingClientRect();
     const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
     let best = null, bd = Infinity;
-    for (let x = 0; x < 3; x++) for (let y = 0; y < 3; y++) for (let z = 0; z < 3; z++) {
+    for (let x=0;x<3;x++) for (let y=0;y<3;y++) for (let z=0;z<3;z++) {
       const pr = projectG([x,y,z]);
-      const d = (pr.x - cx)**2 + (pr.y - cy)**2;
-      if (d < bd) { bd = d; best = [x,y,z]; }
+      const d = (pr.x-cx)**2 + (pr.y-cy)**2;
+      if (d < bd) { bd = d; best=[x,y,z]; }
     }
     if (!best) return;
     const origin = best, norm = pieces[selected].norm;
     for (const c of norm) {
-      const wx = origin[0]+c[0], wy = origin[1]+c[1], wz = origin[2]+c[2];
-      if (wx < 0|| wx > 2|| wy < 0|| wy > 2|| wz < 0|| wz > 2) return;
-      if (occupied[[wx,wy,wz].join(",")] != null) return;
+      const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
+      if (wx<0||wx>2||wy<0||wy>2||wz<0||wz>2) return;
+      if (occupied[[wx,wy,wz].join(",")]!=null) return;
     }
-    norm.forEach(c => { occupied[[origin[0]+c[0],origin[1]+c[1],origin[2]+c[2]].join(",")] = selected; });
+    norm.forEach(c=>occupied[[origin[0]+c[0],origin[1]+c[1],origin[2]+c[2]].join(",")]=selected);
     placements.push({idx:selected, origin});
-    document.querySelectorAll("canvas.piece").forEach(c => c.classList.remove("selected"));
+    document.querySelectorAll("canvas.piece").forEach(c=>c.classList.remove("selected"));
     selected = null;
     drawSolver();
+  });
+
+  // drag-over & drop support
+  solver.addEventListener("dragover", e => { e.preventDefault(); solver.style.cursor="copy"; });
+  solver.addEventListener("dragleave", e => { solver.style.cursor="grab"; });
+  solver.addEventListener("drop", e => {
+    e.preventDefault();
+    const idx = parseInt(e.dataTransfer.getData("text/plain"),10);
+    if (isNaN(idx)) return;
+    const rect = solver.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    let best, bd=Infinity;
+    for (let x=0;x<3;x++) for (let y=0;y<3;y++) for (let z=0;z<3;z++) {
+      // use center of cell
+      const pr = projectG([x+0.5,y+0.5,z+0.5]);
+      const d = (pr.x-cx)**2 + (pr.y-cy)**2;
+      if (d<bd) { bd=d; best=[x,y,z]; }
+    }
+    const origin = best, norm = pieces[idx].norm;
+    // bounds & overlap check
+    for (const c of norm) {
+      const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
+      if (wx<0||wx>2||wy<0||wy>2||wz<0||wz>2) return;
+      if (occupied[[wx,wy,wz].join(",")]!=null) return;
+    }
+    norm.forEach(c=>occupied[[origin[0]+c[0],origin[1]+c[1],origin[2]+c[2]].join(",")]=idx);
+    placements.push({idx,origin}); drawSolver(); solver.style.cursor="grab";
   });
 
   drawSolver();
