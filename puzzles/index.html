@@ -11,9 +11,10 @@
       margin: 0;
       font-family: Palatino, serif;
       background: #fafafa;
+      overflow-x: hidden;
     }
     header {
-      position: absolute; 
+      position: fixed;
       top: 0; 
       width: 100%;
       background: white; 
@@ -32,17 +33,81 @@
     .nav-links a.active { 
       font-weight: bold; 
     }
-    canvas { 
-      display: block; 
-    }
-    #error-message {
-      position: fixed;
-      top: 60px;
-      left: 0;
+    
+    .content {
+      margin-top: 80px;
       padding: 20px;
-      background: white;
-      color: red;
-      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .puzzles-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+      max-width: 1200px;
+    }
+    
+    .puzzle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 300px;
+    }
+    
+    .puzzle-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .puzzle-grid {
+      position: relative;
+      width: 150px;
+      height: 150px;
+    }
+    
+    .cube {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Perspective styling for cubes */
+    .cube-3d {
+      transform-style: preserve-3d;
+      transform: rotateX(30deg) rotateZ(-45deg);
+    }
+    
+    .face-top {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      transform: translateZ(15px);
+    }
+    
+    .face-left {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      transform: rotateY(-90deg) translateZ(15px);
+      opacity: 0.8;
+    }
+    
+    .face-right {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      transform: rotateY(90deg) translateZ(15px);
+      opacity: 0.7;
     }
   </style>
 </head>
@@ -55,118 +120,113 @@
     </div>
   </header>
   
-  <div id="error-message"></div>
+  <div class="content">
+    <h1>3D Puzzle Pieces</h1>
+    
+    <div class="puzzles-container" id="puzzles">
+      <!-- Puzzle pieces will be added here by JavaScript -->
+    </div>
+  </div>
   
-  <!-- Using three.js from official CDN -->
-  <script src="https://threejs.org/build/three.min.js"></script>
-  <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
-
   <script>
-    // Wait for the scripts to load
-    window.addEventListener('load', function() {
-      try {
-        // Check if Three.js loaded properly
-        if (typeof THREE === 'undefined') {
-          throw new Error("THREE is not defined. Three.js didn't load properly.");
-        }
-        
-        // Check if OrbitControls exists
-        if (typeof THREE.OrbitControls === 'undefined') {
-          throw new Error("THREE.OrbitControls is not defined. OrbitControls didn't load properly.");
-        }
-        
-        // Basic scene setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
-        camera.position.set(10, 10, 10);
-        
-        // Renderer setup
-        const renderer = new THREE.WebGLRenderer({antialias: true});
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0xfafafa);
-        document.body.appendChild(renderer.domElement);
-        
-        // Initialize OrbitControls
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        
-        // Lights
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-        dir.position.set(10, 20, 10);
-        scene.add(dir);
-        
-        // Piece coordinate arrays
-        const pieces = [
-          // piece 1
-          [[0,0,0],[0,0,1],[0,1,0]],
-          // piece 2
-          [[0,0,0],[0,0,1],[0,0,2],[0,1,0]],
-          // piece 3
-          [[0,0,0],[0,0,1],[0,0,2],[0,1,1]],
-          // piece 4
-          [[0,0,0],[0,0,1],[0,1,0],[1,0,0]],
-          // piece 5
-          [[0,0,0],[0,0,1],[0,1,0],[1,0,1]],
-          // piece 6
-          [[0,0,0],[0,0,1],[0,1,0],[1,1,0]],
-          // piece 7
-          [[0,0,0],[0,0,1],[0,1,1],[0,1,2]]
-        ];
-        
-        // Distinct colors
-        const colors = [
-          0xe6194B, 0x3cb44b, 0x4363d8,
-          0xf58231, 0x911eb4, 0x46f0f0, 0xf032e6
-        ];
-        
-        // Create geometry once for reuse
-        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-        
-        // Build and place each piece
-        pieces.forEach((coords, i) => {
-          const group = new THREE.Group();
-          const mat = new THREE.MeshStandardMaterial({ 
-            color: colors[i],
-            roughness: 0.7,
-            metalness: 0.2
-          });
-          
-          coords.forEach(c => {
-            const cube = new THREE.Mesh(cubeGeometry, mat);
-            cube.position.set(c[0], c[1], c[2]);
-            group.add(cube);
-          });
-          
-          // Position each piece along X-axis
-          group.position.set(i * 4 - 12, 0, 0);
-          scene.add(group);
-        });
-        
-        // Add a grid helper
-        const gridHelper = new THREE.GridHelper(30, 30);
-        scene.add(gridHelper);
-        
-        function animate() {
-          requestAnimationFrame(animate);
-          controls.update();
-          renderer.render(scene, camera);
-        }
-        
-        animate();
-        
-        window.addEventListener('resize', () => {
-          camera.aspect = window.innerWidth/window.innerHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-        
-      } catch (error) {
-        console.error("Three.js error:", error);
-        document.getElementById('error-message').textContent = "Error loading 3D puzzle: " + error.message;
+    // Piece coordinate arrays
+    const pieces = [
+      {
+        name: "Piece 1 (L Shape)",
+        coords: [[0,0,0],[0,0,1],[0,1,0]]
+      },
+      {
+        name: "Piece 2 (T Shape)",
+        coords: [[0,0,0],[0,0,1],[0,0,2],[0,1,0]]
+      },
+      {
+        name: "Piece 3 (Zigzag)",
+        coords: [[0,0,0],[0,0,1],[0,0,2],[0,1,1]]
+      },
+      {
+        name: "Piece 4 (Corner)",
+        coords: [[0,0,0],[0,0,1],[0,1,0],[1,0,0]]
+      },
+      {
+        name: "Piece 5 (Z Shape)",
+        coords: [[0,0,0],[0,0,1],[0,1,0],[1,0,1]]
+      },
+      {
+        name: "Piece 6 (Cross)",
+        coords: [[0,0,0],[0,0,1],[0,1,0],[1,1,0]]
+      },
+      {
+        name: "Piece 7 (Stair)",
+        coords: [[0,0,0],[0,0,1],[0,1,1],[0,1,2]]
       }
-    });
+    ];
+    
+    // Distinct colors
+    const colors = [
+      "#e6194B", "#3cb44b", "#4363d8",
+      "#f58231", "#911eb4", "#46f0f0", "#f032e6"
+    ];
+    
+    // Function to create the puzzle pieces
+    function createPuzzles() {
+      const puzzlesContainer = document.getElementById('puzzles');
+      
+      pieces.forEach((piece, i) => {
+        // Create puzzle container
+        const puzzleDiv = document.createElement('div');
+        puzzleDiv.className = 'puzzle';
+        
+        // Add title
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'puzzle-title';
+        titleDiv.textContent = piece.name;
+        puzzleDiv.appendChild(titleDiv);
+        
+        // Create puzzle grid
+        const gridDiv = document.createElement('div');
+        gridDiv.className = 'puzzle-grid cube-3d';
+        
+        // Add cubes to grid
+        piece.coords.forEach(coord => {
+          const cubeDiv = document.createElement('div');
+          cubeDiv.className = 'cube';
+          
+          // Position cube based on coordinates (x,y,z)
+          const x = coord[0] * 30;
+          const y = coord[1] * 30;
+          const z = coord[2] * 30;
+          
+          // Adjust position for isometric view
+          cubeDiv.style.left = `${75 + x - z}px`;
+          cubeDiv.style.top = `${75 - (y - x/2 - z/2)}px`;
+          
+          // Create cube faces for 3D effect
+          const faceTop = document.createElement('div');
+          faceTop.className = 'face-top';
+          faceTop.style.backgroundColor = colors[i];
+          
+          const faceLeft = document.createElement('div');
+          faceLeft.className = 'face-left';
+          faceLeft.style.backgroundColor = colors[i];
+          
+          const faceRight = document.createElement('div');
+          faceRight.className = 'face-right';
+          faceRight.style.backgroundColor = colors[i];
+          
+          cubeDiv.appendChild(faceTop);
+          cubeDiv.appendChild(faceLeft);
+          cubeDiv.appendChild(faceRight);
+          
+          gridDiv.appendChild(cubeDiv);
+        });
+        
+        puzzleDiv.appendChild(gridDiv);
+        puzzlesContainer.appendChild(puzzleDiv);
+      });
+    }
+    
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', createPuzzles);
   </script>
 </body>
 </html>
