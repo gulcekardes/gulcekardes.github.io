@@ -3,21 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Gülce Kardeş – Puzzles</title>
-  <link href="https://fonts.googleapis.com/css2?family=Mate:wght@400;700&display=swap" rel="stylesheet"/>
+  <title>Gülce Kardeş – Soma Cube Solver</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: Palatino, serif;
       background: #fafafa;
-      color: #333;
-      overflow-y: scroll;
     }
     header {
       background: white;
       padding: 1rem;
       text-align: center;
-      font-family: Palatino, serif;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       position: sticky; top: 0; z-index: 10;
     }
@@ -26,14 +22,12 @@
       color: navy;
       text-decoration: none;
       font-size: 1.1rem;
-      font-family: Palatino, serif;
     }
     .nav-links a.active { font-weight: bold; }
     main {
       padding: 1rem;
     }
     h2 {
-      font-family: Palatino, serif;
       margin: 1.5rem 0 0.5rem;
       font-size: 1.5rem;
       text-align: center;
@@ -42,38 +36,36 @@
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      justify-content: flex-start;
     }
     figure {
       width: 200px;
       text-align: center;
     }
     figcaption {
-      font-family: Palatino, serif;
+      margin-bottom: 4px;
       font-weight: bold;
-      margin-bottom: 5px;
-    }
-    canvas {
-      background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      display: block;
-      margin: 0 auto;
     }
     canvas.piece {
       width: 200px;
       height: 200px;
+      background: white;
       cursor: pointer;
       border: 2px solid transparent;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
     canvas.piece.selected {
       border-color: crimson;
     }
-    canvas#solver {
+    #solver {
+      display: block;
       width: 400px;
       height: 400px;
+      margin: 1rem auto;
+      background: white;
       cursor: grab;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
-    canvas#solver:active {
+    #solver:active {
       cursor: grabbing;
     }
   </style>
@@ -96,18 +88,18 @@
   </main>
 
   <script>
-  // --- Pieces JSON (with Z↔P swapped) ---
+  // --- Pieces (Z↔P swapped) ---
   const pieces = [
-    { name:"V", coords:[[0,0,0],[0,0,1],[0,1,0]],             color:"#e6194B" },
-    { name:"L", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,0]],     color:"#3cb44b" },
-    { name:"T", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,1]],     color:"#4363d8" },
-    { name:"P", coords:[[0,0,0],[0,0,1],[0,1,0],[1,0,0]],     color:"#f58231" }, // was Z
-    { name:"A", coords:[[0,0,0],[0,0,1],[0,1,0],[1,0,1]],     color:"#911eb4" },
-    { name:"B", coords:[[0,0,0],[0,0,1],[0,1,0],[1,1,0]],     color:"#46f0f0" },
-    { name:"Z", coords:[[0,0,0],[0,0,1],[0,1,1],[0,1,2]],     color:"#f032e6" }  // was P
+    { name:"V", coords:[[0,0,0],[0,0,1],[0,1,0]],          color:"#e6194B" },
+    { name:"L", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,0]],  color:"#3cb44b" },
+    { name:"T", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,1]],  color:"#4363d8" },
+    { name:"P", coords:[[0,0,0],[0,0,1],[0,1,0],[1,0,0]],  color:"#f58231" },
+    { name:"A", coords:[[0,0,0],[0,0,1],[0,1,0],[1,0,1]],  color:"#911eb4" },
+    { name:"B", coords:[[0,0,0],[0,0,1],[0,1,0],[1,1,0]],  color:"#46f0f0" },
+    { name:"Z", coords:[[0,0,0],[0,0,1],[0,1,1],[0,1,2]],  color:"#f032e6" }
   ];
 
-  // faces: top, front, right, left
+  // faces to draw
   const faces = [
     { verts:[[0,1,0],[1,1,0],[1,1,1],[0,1,1]], normal:[0,1,0], shade:1.00 },
     { verts:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]], normal:[0,0,1], shade:0.85 },
@@ -115,84 +107,70 @@
     { verts:[[0,0,0],[0,0,1],[0,1,1],[0,1,0]], normal:[-1,0,0], shade:0.65 }
   ];
 
-  // shade a color toward white
   function shadeColor(hex,s){
     const r=parseInt(hex.slice(1,3),16),
           g=parseInt(hex.slice(3,5),16),
           b=parseInt(hex.slice(5,7),16);
-    const nr=Math.round(r*s+255*(1-s)),
-          ng=Math.round(g*s+255*(1-s)),
-          nb=Math.round(b*s+255*(1-s));
-    return `rgb(${nr},${ng},${nb})`;
+    return `rgb(${Math.round(r*s+255*(1-s))},${Math.round(g*s+255*(1-s))},${Math.round(b*s+255*(1-s))})`;
   }
 
-  // --- Part 1: draw piece canvases & handle selection ---
-  let selectedPiece = null;
+  // --- Render pieces & handle selection ---
+  let selected = null;
   const piecesDiv = document.getElementById("pieces");
 
-  pieces.forEach((p,pi)=>{
-    // normalize coords so min is at 0,0,0
-    const mins = p.coords.reduce((m,c)=>[
-      Math.min(m[0],c[0]),
-      Math.min(m[1],c[1]),
-      Math.min(m[2],c[2])
-    ], [Infinity,Infinity,Infinity]);
-    const norm = p.coords.map(c=>[c[0]-mins[0],c[1]-mins[1],c[2]-mins[2]]);
-    p.norm = norm;
-    // build DOM
+  pieces.forEach((p, idx)=>{
+    // normalize so min coord is at 0
+    const mins = p.coords.reduce((m,c)=>[Math.min(m[0],c[0]),Math.min(m[1],c[1]),Math.min(m[2],c[2])],[Infinity,Infinity,Infinity]);
+    p.norm = p.coords.map(c=>[c[0]-mins[0],c[1]-mins[1],c[2]-mins[2]]);
+
     const fig = document.createElement("figure");
     const cap = document.createElement("figcaption");
     cap.textContent = p.name;
     fig.append(cap);
 
-    const canvas = document.createElement("canvas");
-    canvas.classList.add("piece");
-    canvas.width=400; canvas.height=400;
-    fig.append(canvas);
+    const cv = document.createElement("canvas");
+    cv.className = "piece";
+    cv.width = 400; cv.height = 400;
+    fig.append(cv);
     piecesDiv.append(fig);
 
-    // draw piece
-    const ctx = canvas.getContext("2d");
+    const ctx = cv.getContext("2d");
     // compute centroid
-    const n = norm.length;
-    const cx3 = norm.reduce((s,c)=>s+c[0],0)/n,
-          cy3 = norm.reduce((s,c)=>s+c[1],0)/n,
-          cz3 = norm.reduce((s,c)=>s+c[2],0)/n;
+    const n = p.norm.length;
+    const cx3 = p.norm.reduce((s,c)=>s+c[0],0)/n,
+          cy3 = p.norm.reduce((s,c)=>s+c[1],0)/n,
+          cz3 = p.norm.reduce((s,c)=>s+c[2],0)/n;
 
-    // projection
-    let rotX = Math.PI/6, rotY = -Math.PI/6;
-    function project([x,y,z]){
-      x -= cx3; y -= cy3; z -= cz3;
+    let rotX=Math.PI/6, rotY=-Math.PI/6;
+    function project(pt){
+      let [x,y,z]=pt;
+      x-=cx3; y-=cy3; z-=cz3;
       const cY=Math.cos(rotY), sY=Math.sin(rotY);
       let dx=cY*x + sY*z, dz=-sY*x + cY*z, dy=y;
       const cX=Math.cos(rotX), sX=Math.sin(rotX);
-      let dy2=cX*dy - sX*dz, dz2=sX*dy + cX*dz;
-      const scale=80;
+      let dy2=cX*dy - sX*dz;
+      let dz2=sX*dy + cX*dz;
+      const scale = 80;
       return {
-        x: canvas.width/2 + dx*scale,
-        y: canvas.height/2 - dy2*scale,
+        x: cv.width/2 + dx*scale,
+        y: cv.height/2 - dy2*scale,
         depth: dz2
       };
     }
 
     function drawPiece(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.clearRect(0,0,cv.width,cv.height);
       // sort cubes back→front
-      const cells = norm.map(c0=>{
-        const pr=project(c0);
-        return { c0, depth:pr.depth };
+      const cells = p.norm.map(c0=>{
+        const pr = project(c0);
+        return {c0,depth:pr.depth};
       }).sort((a,b)=>a.depth-b.depth);
-      // draw each face
+
       cells.forEach(d=>{
         faces.forEach(f=>{
-          const nb = [d.c0[0]+f.normal[0],d.c0[1]+f.normal[1],d.c0[2]+f.normal[2]].join(",");
-          if (p.norm.map(JSON.stringify).includes(JSON.stringify([d.c0[0]+f.normal[0],d.c0[1]+f.normal[1],d.c0[2]+f.normal[2]]))) {
-            // still draw exposed faces only
-          }
-          // but for pieces, always draw all 4 faces
           const pts = f.verts.map(v=>project([d.c0[0]+v[0],d.c0[1]+v[1],d.c0[2]+v[2]]));
           ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
+          ctx.moveTo(pts[0].x,pts[0].y);
           pts.slice(1).forEach(p2=>ctx.lineTo(p2.x,p2.y));
           ctx.closePath();
           ctx.fillStyle = shadeColor(p.color,f.shade);
@@ -204,163 +182,134 @@
     }
     drawPiece();
 
-    // allow rotating view
-    let dragging=false, lX=0, lY=0;
-    canvas.addEventListener("mousedown", e=>{
-      dragging=true; lX=e.clientX; lY=e.clientY;
-    });
-    window.addEventListener("mousemove", e=>{
-      if(!dragging) return;
-      rotY += (e.clientX-lX)*0.01;
-      rotX += (e.clientY-lY)*0.01;
-      lX=e.clientX; lY=e.clientY;
+    // drag to rotate view
+    let drag=false, lx=0, ly=0;
+    cv.addEventListener("mousedown",e=>{ drag=true; lx=e.clientX; ly=e.clientY; });
+    window.addEventListener("mousemove",e=>{
+      if(!drag) return;
+      rotY += (e.clientX - lx)*0.01;
+      rotX += (e.clientY - ly)*0.01;
+      lx=e.clientX; ly=e.clientY;
       drawPiece();
     });
-    window.addEventListener("mouseup",()=>dragging=false);
+    window.addEventListener("mouseup",()=>drag=false);
 
-    // selection
-    canvas.addEventListener("click", ()=>{
+    // select on click
+    cv.addEventListener("click",()=>{
       document.querySelectorAll("canvas.piece").forEach(c=>c.classList.remove("selected"));
-      if (selectedPiece===pi) {
-        selectedPiece = null;
-      } else {
-        selectedPiece = pi;
-        canvas.classList.add("selected");
-      }
+      if(selected===idx) selected=null;
+      else { selected=idx; cv.classList.add("selected"); }
     });
   });
 
-  // --- Part 2: solver grid + placement logic ---
-  const sCanvas = document.getElementById("solver"),
-        sCtx    = sCanvas.getContext("2d");
+  // --- Solver grid & placement ---
+  const solver = document.getElementById("solver"),
+        sCtx   = solver.getContext("2d");
+  solver.width = solver.height = 400;
   let sRotX=Math.PI/6, sRotY=-Math.PI/6;
-  let draggingGrid=false, gLX=0, gLY=0;
+  let dragG=false, glx=0, gly=0;
 
-  // solver state
-  const occupied = {};  // "x,y,z" -> piece index
-  const placements = [];  // {idx, origin:[x,y,z]}
+  const occupied = {};   // "x,y,z" -> piece idx
+  const placements = []; // {idx, origin}
 
-  // project solver
-  const size = 50;
-  function projectG([x,y,z]){
+  function projectG(pt){
+    let [x,y,z]=pt;
     const cY=Math.cos(sRotY), sY=Math.sin(sRotY);
     let dx=cY*x + sY*z, dz=-sY*x + cY*z, dy=y;
     const cX=Math.cos(sRotX), sX=Math.sin(sRotX);
-    let dy2=cX*dy - sX*dz, dz2=sX*dy + cX*dz;
+    let dy2=cX*dy - sX*dz;
+    let dz2=sX*dy + cX*dz;
     return {
-      x: sCanvas.width/2 + dx*size,
-      y: sCanvas.height/2 - dy2*size,
+      x: solver.width/2 + dx*50,
+      y: solver.height/2 - dy2*50,
       depth: dz2
     };
   }
 
   function drawSolver(){
-    sCtx.clearRect(0,0,sCanvas.width,sCanvas.height);
-    // draw grid
+    sCtx.clearRect(0,0,solver.width,solver.height);
+    // wireframe
     sCtx.strokeStyle="#888";
-    for(let i=0;i<=3;i++){
-      for(let j=0;j<=3;j++){
-        // x line
-        let p0=projectG([0,i,j]), p1=projectG([3,i,j]);
-        sCtx.beginPath(); sCtx.moveTo(p0.x,p0.y); sCtx.lineTo(p1.x,p1.y); sCtx.stroke();
-        // y line
-        p0=projectG([i,0,j]); p1=projectG([i,3,j]);
-        sCtx.beginPath(); sCtx.moveTo(p0.x,p0.y); sCtx.lineTo(p1.x,p1.y); sCtx.stroke();
-        // z line
-        p0=projectG([i,j,0]); p1=projectG([i,j,3]);
-        sCtx.beginPath(); sCtx.moveTo(p0.x,p0.y); sCtx.lineTo(p1.x,p1.y); sCtx.stroke();
-      }
+    for(let i=0;i<=3;i++)for(let j=0;j<=3;j++){
+      let p0=projectG([0,i,j]), p1=projectG([3,i,j]);
+      sCtx.beginPath(); sCtx.moveTo(p0.x,p0.y); sCtx.lineTo(p1.x,p1.y); sCtx.stroke();
+      p0=projectG([i,0,j]); p1=projectG([i,3,j]);
+      sCtx.beginPath(); sCtx.moveTo(p0.x,p0.y); sCtx.lineTo(p1.x,p1.y); sCtx.stroke();
+      p0=projectG([i,j,0]); p1=projectG([i,j,3]);
+      sCtx.beginPath(); sCtx.moveTo(p0.x,p0.y); sCtx.lineTo(p1.x,p1.y); sCtx.stroke();
     }
-    // draw placed pieces
-    // flatten all cubes with depth
+    // draw placed cubes
     const allCubes = [];
     placements.forEach(pl=>{
       const piece = pieces[pl.idx];
       piece.norm.forEach(c0=>{
-        const wx = pl.origin[0]+c0[0],
-              wy = pl.origin[1]+c0[1],
-              wz = pl.origin[2]+c0[2];
-        const pr = projectG([wx,wy,wz]);
-        allCubes.push({wx,wy,wz, color:piece.color, depth:pr.depth});
+        const wx=pl.origin[0]+c0[0],
+              wy=pl.origin[1]+c0[1],
+              wz=pl.origin[2]+c0[2];
+        const pr=projectG([wx,wy,wz]);
+        allCubes.push({wx,wy,wz,depth:pr.depth,color:piece.color});
       });
     });
-    // sort by depth
     allCubes.sort((a,b)=>a.depth-b.depth);
-    // draw faces
     allCubes.forEach(d=>{
       faces.forEach(f=>{
-        const nb = [d.wx+f.normal[0], d.wy+f.normal[1], d.wz+f.normal[2]].join(",");
-        if (occupied[nb]!=null) {
-          // skip internal
-          return;
-        }
-        const pts = f.verts.map(v=>
-          projectG([d.wx+v[0], d.wy+v[1], d.wz+v[2]])
-        );
+        const nb=[d.wx+f.normal[0],d.wy+f.normal[1],d.wz+f.normal[2]].join(",");
+        if(occupied[nb]!=null) return;
+        const pts=f.verts.map(v=>projectG([d.wx+v[0],d.wy+v[1],d.wz+v[2]]));
         sCtx.beginPath();
         sCtx.moveTo(pts[0].x,pts[0].y);
         pts.slice(1).forEach(p2=>sCtx.lineTo(p2.x,p2.y));
         sCtx.closePath();
-        sCtx.fillStyle = shadeColor(d.color, f.shade);
+        sCtx.fillStyle=shadeColor(d.color,f.shade);
         sCtx.fill();
-        sCtx.strokeStyle = "#333";
+        sCtx.strokeStyle="#333";
         sCtx.stroke();
       });
     });
   }
 
-  // rotate solver grid
-  sCanvas.addEventListener("mousedown",e=>{
-    draggingGrid=true; gLX=e.clientX; gLY=e.clientY;
-  });
+  // rotate solver
+  solver.addEventListener("mousedown",e=>{ dragG=true; glx=e.clientX; gly=e.clientY; });
   window.addEventListener("mousemove",e=>{
-    if(!draggingGrid) return;
-    sRotY += (e.clientX-gLX)*0.01;
-    sRotX += (e.clientY-gLY)*0.01;
-    gLX=e.clientX; gLY=e.clientY;
+    if(!dragG) return;
+    sRotY += (e.clientX-glx)*0.01;
+    sRotX += (e.clientY-gly)*0.01;
+    glx=e.clientX; gly=e.clientY;
     drawSolver();
   });
-  window.addEventListener("mouseup",()=>draggingGrid=false);
+  window.addEventListener("mouseup",()=>dragG=false);
 
-  // place selected piece on solver click
-  sCanvas.addEventListener("click", e=>{
-    if (selectedPiece==null) return;
-    // get click pos
-    const rect = sCanvas.getBoundingClientRect();
-    const cx = e.clientX-rect.left, cy=e.clientY-rect.top;
-    // find nearest grid cell center
-    let best = null, bestDist=Infinity;
+  // place on click
+  solver.addEventListener("click",e=>{
+    if(selected==null) return;
+    const rect=solver.getBoundingClientRect();
+    const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+    // find nearest cell
+    let best=null, bd=Infinity;
     for(let x=0;x<3;x++)for(let y=0;y<3;y++)for(let z=0;z<3;z++){
-      const pr = projectG([x,y,z]);
-      const d = (pr.x-cx)**2 + (pr.y-cy)**2;
-      if (d<bestDist){
-        bestDist=d; best=[x,y,z];
-      }
+      const pr=projectG([x,y,z]);
+      const d=(pr.x-cx)**2+(pr.y-cy)**2;
+      if(d<bd){ bd=d; best=[x,y,z]; }
     }
-    const origin = best;
-    // check validity
-    const norm = pieces[selectedPiece].norm;
+    const origin=best, norm=pieces[selected].norm;
+    // validate
     for(let c of norm){
-      const wx=origin[0]+c[0],
-            wy=origin[1]+c[1],
-            wz=origin[2]+c[2];
-      if (wx<0||wx>2||wy<0||wy>2||wz<0||wz>2) return;
-      if (occupied[[wx,wy,wz].join(",")]!=null) return;
+      const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
+      if(wx<0||wx>2||wy<0||wy>2||wz<0||wz>2) return;
+      if(occupied[[wx,wy,wz].join(",")]!=null) return;
     }
-    // place it
+    // commit placement
     norm.forEach(c=>{
-      occupied[[origin[0]+c[0],origin[1]+c[1],origin[2]+c[2]].join(",")] = selectedPiece;
+      occupied[[origin[0]+c[0],origin[1]+c[1],origin[2]+c[2]].join(",")]=selected;
     });
-    placements.push({idx:selectedPiece, origin});
-    // deselect
+    placements.push({idx:selected,origin});
+    // clear selection
     document.querySelectorAll("canvas.piece").forEach(c=>c.classList.remove("selected"));
-    selectedPiece = null;
+    selected=null;
     drawSolver();
   });
 
-  // initial draw
   drawSolver();
-
   </script>
 </body>
 </html>
