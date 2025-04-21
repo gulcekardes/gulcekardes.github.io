@@ -11,7 +11,7 @@
       margin: 0;
       font-family: Palatino, serif;
       background: #fafafa;
-      /* Removed overflow: hidden which could hide the canvas */
+      /* Removed overflow: hidden */
     }
     header {
       position: absolute; 
@@ -50,10 +50,8 @@
     </div>
   </header>
   
-  <!-- Three.js core -->
-  <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
-  <!-- OrbitControls loaded correctly -->
-  <script src="https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
 
   <script>
     try {
@@ -65,10 +63,10 @@
       // Renderer setup
       const renderer = new THREE.WebGLRenderer({antialias: true});
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setClearColor(0xfafafa); // Match background color
+      renderer.setClearColor(0xfafafa);
       document.body.appendChild(renderer.domElement);
       
-      // Import OrbitControls properly
+      // OrbitControls correctly initialized
       const controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
@@ -125,7 +123,7 @@
         group.rotation.y = Math.PI * 0.1 * (i % 3 - 1);
         group.rotation.x = Math.PI * 0.05 * (i % 2);
         
-        // Spread them along X-axis with a bit more spacing
+        // Spread them along X-axis with better spacing
         group.position.set(i * 4 - 12, 0, 0);
         scene.add(group);
       });
