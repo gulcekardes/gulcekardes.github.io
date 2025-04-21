@@ -2,116 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Gülce Kardeş – Puzzles</title>
-  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Volkorn:wght@400;700&family=Mate:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
       font-family: Palatino, serif;
       background: #fafafa;
-      overflow-x: hidden;
+      overflow: hidden;
     }
     header {
-      position: fixed;
-      top: 0; 
-      width: 100%;
-      background: white; 
-      padding: 1rem;
-      text-align: center; 
-      font-family: Volkorn, serif;
-      z-index: 10;
+      position: absolute; top: 0; width: 100%;
+      background: white; padding: 1rem;
+      text-align: center; font-family: Volkorn, serif;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      z-index: 10;
     }
     .nav-links a {
-      margin: 0 10px; 
-      color: navy;
-      text-decoration: none; 
-      font-size: 1.1rem;
+      margin: 0 10px; color: navy;
+      text-decoration: none; font-size: 1.1rem;
     }
-    .nav-links a.active { 
-      font-weight: bold; 
+    .nav-links a.active { font-weight: bold; }
+
+    /* 3D scene container */
+    #scene {
+      width: 100vw;
+      height: 100vh;
+      perspective: 800px;
+      transform-style: preserve-3d;
+      /* tilt the whole scene for a nice view */
+      transform: rotateX(20deg) rotateY(-30deg);
     }
-    
-    .content {
-      margin-top: 80px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+
+    /* each piece is a group of cubes */
+    .piece {
+      position: absolute;
+      transform-style: preserve-3d;
     }
-    
-    h1 {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-    
-    .puzzles-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 40px;
-      max-width: 1200px;
-    }
-    
-    .puzzle {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 300px;
-    }
-    
-    .puzzle-title {
-      font-size: 1.2rem;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-    
-    .puzzle-grid {
-      position: relative;
-      width: 150px;
-      height: 150px;
-    }
-    
+
+    /* each cube (one block in a piece) */
     .cube {
       position: absolute;
-      width: 30px;
-      height: 30px;
-      border: 1px solid rgba(0, 0, 0, 0.3);
-    }
-    
-    /* Perspective styling for cubes */
-    .cube-3d {
+      width: 50px; height: 50px;
       transform-style: preserve-3d;
-      transform: rotateX(30deg) rotateZ(-45deg);
     }
-    
-    .face-top {
+
+    /* all six faces */
+    .face {
       position: absolute;
-      width: 30px;
-      height: 30px;
-      transform: translateZ(15px);
+      width: 50px; height: 50px;
+      background: inherit;
+      border: 1px solid #333;
     }
-    
-    .face-left {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      transform: rotateY(-90deg) translateZ(15px);
-      opacity: 0.8;
-    }
-    
-    .face-right {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      transform: rotateY(90deg) translateZ(15px);
-      opacity: 0.7;
-    }
+    .face-front  { transform: translateZ(25px); }
+    .face-back   { transform: rotateY(180deg) translateZ(25px); }
+    .face-right  { transform: rotateY( 90deg) translateZ(25px); }
+    .face-left   { transform: rotateY(-90deg) translateZ(25px); }
+    .face-top    { transform: rotateX( 90deg) translateZ(25px); }
+    .face-bottom { transform: rotateX(-90deg) translateZ(25px); }
   </style>
 </head>
 <body>
+
   <header>
     <div class="nav-links">
       <a href="../index.html">Home</a>
@@ -119,114 +72,61 @@
       <a href="https://scholar.google.com/citations?user=-io3rR0AAAAJ">Google Scholar</a>
     </div>
   </header>
-  
-  <div class="content">
-    <h1>3D Puzzle Pieces</h1>
-    
-    <div class="puzzles-container" id="puzzles">
-      <!-- Puzzle pieces will be added here by JavaScript -->
-    </div>
-  </div>
-  
+
+  <div id="scene"></div>
+
   <script>
-    // Piece coordinate arrays
+    // the seven pieces as lists of [x,y,z]
     const pieces = [
-      {
-        name: "Piece 1 (L Shape)",
-        coords: [[0,0,0],[0,0,1],[0,1,0]]
-      },
-      {
-        name: "Piece 2 (T Shape)",
-        coords: [[0,0,0],[0,0,1],[0,0,2],[0,1,0]]
-      },
-      {
-        name: "Piece 3 (Zigzag)",
-        coords: [[0,0,0],[0,0,1],[0,0,2],[0,1,1]]
-      },
-      {
-        name: "Piece 4 (Corner)",
-        coords: [[0,0,0],[0,0,1],[0,1,0],[1,0,0]]
-      },
-      {
-        name: "Piece 5 (Z Shape)",
-        coords: [[0,0,0],[0,0,1],[0,1,0],[1,0,1]]
-      },
-      {
-        name: "Piece 6 (Cross)",
-        coords: [[0,0,0],[0,0,1],[0,1,0],[1,1,0]]
-      },
-      {
-        name: "Piece 7 (Stair)",
-        coords: [[0,0,0],[0,0,1],[0,1,1],[0,1,2]]
-      }
+      [[0,0,0],[0,0,1],[0,1,0]],
+      [[0,0,0],[0,0,1],[0,0,2],[0,1,0]],
+      [[0,0,0],[0,0,1],[0,0,2],[0,1,1]],
+      [[0,0,0],[0,0,1],[0,1,0],[1,0,0]],
+      [[0,0,0],[0,0,1],[0,1,0],[1,0,1]],
+      [[0,0,0],[0,0,1],[0,1,0],[1,1,0]],
+      [[0,0,0],[0,0,1],[0,1,1],[0,1,2]]
     ];
-    
-    // Distinct colors
+    // matching CSS colors
     const colors = [
-      "#e6194B", "#3cb44b", "#4363d8",
-      "#f58231", "#911eb4", "#46f0f0", "#f032e6"
+      '#e6194B','#3cb44b','#4363d8',
+      '#f58231','#911eb4','#46f0f0','#f032e6'
     ];
-    
-    // Function to create the puzzle pieces
-    function createPuzzles() {
-      const puzzlesContainer = document.getElementById('puzzles');
-      
-      pieces.forEach((piece, i) => {
-        // Create puzzle container
-        const puzzleDiv = document.createElement('div');
-        puzzleDiv.className = 'puzzle';
-        
-        // Add title
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'puzzle-title';
-        titleDiv.textContent = piece.name;
-        puzzleDiv.appendChild(titleDiv);
-        
-        // Create puzzle grid
-        const gridDiv = document.createElement('div');
-        gridDiv.className = 'puzzle-grid cube-3d';
-        
-        // Add cubes to grid
-        piece.coords.forEach(coord => {
-          const cubeDiv = document.createElement('div');
-          cubeDiv.className = 'cube';
-          
-          // Position cube based on coordinates (x,y,z)
-          const x = coord[0] * 30;
-          const y = coord[1] * 30;
-          const z = coord[2] * 30;
-          
-          // Adjust position for isometric view
-          cubeDiv.style.left = `${75 + x - z}px`;
-          cubeDiv.style.top = `${75 - (y - x/2 - z/2)}px`;
-          
-          // Create cube faces for 3D effect
-          const faceTop = document.createElement('div');
-          faceTop.className = 'face-top';
-          faceTop.style.backgroundColor = colors[i];
-          
-          const faceLeft = document.createElement('div');
-          faceLeft.className = 'face-left';
-          faceLeft.style.backgroundColor = colors[i];
-          
-          const faceRight = document.createElement('div');
-          faceRight.className = 'face-right';
-          faceRight.style.backgroundColor = colors[i];
-          
-          cubeDiv.appendChild(faceTop);
-          cubeDiv.appendChild(faceLeft);
-          cubeDiv.appendChild(faceRight);
-          
-          gridDiv.appendChild(cubeDiv);
+
+    const scene = document.getElementById('scene');
+    const SIZE = 50;    // one cube = 50px
+
+    pieces.forEach((coords, i) => {
+      // create piece container
+      const piece = document.createElement('div');
+      piece.className = 'piece';
+      // spread pieces along X for visibility
+      piece.style.transform = `translateX(${i * (SIZE*4)}px)`;
+      scene.appendChild(piece);
+
+      coords.forEach(c => {
+        // one cube
+        const cube = document.createElement('div');
+        cube.className = 'cube';
+        cube.style.background = colors[i];
+        // position it within its piece-group
+        cube.style.transform = `
+          translate3d(
+            ${c[0]*SIZE}px,
+            ${c[1]*SIZE}px,
+            ${c[2]*SIZE}px
+          )
+        `;
+        // add its six faces
+        ['front','back','right','left','top','bottom'].forEach(face => {
+          const f = document.createElement('div');
+          f.className = 'face face-' + face;
+          f.style.background = colors[i];
+          cube.appendChild(f);
         });
-        
-        puzzleDiv.appendChild(gridDiv);
-        puzzlesContainer.appendChild(puzzleDiv);
+        piece.appendChild(cube);
       });
-    }
-    
-    // Initialize on page load
-    window.addEventListener('DOMContentLoaded', createPuzzles);
+    });
   </script>
+
 </body>
 </html>
