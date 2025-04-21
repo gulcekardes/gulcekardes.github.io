@@ -34,12 +34,10 @@
     <div id="pieces"></div>
     <h2>Soma Cube Solver</h2>
     <canvas id="solver" width="400" height="400"></canvas>
+    <p style="text-align:center; color:#555;">Click a cubie in a piece to select its anchor (red dot), then click a cell to place. Click an occupied cell to remove its piece.</p>
   </main>
   <script>
-  console.log('Soma Cube Solver script loaded');
-  window.addEventListener('error', e => console.error('Script error:', e.message, e));
-
-  // --- Projection & shading setup ---
+  // --- Setup ---
   const faces = [
     { verts:[[0,1,0],[1,1,0],[1,1,1],[0,1,1]], normal:[0,1,0], shade:1.00 },
     { verts:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]], normal:[0,0,1], shade:0.85 },
@@ -51,8 +49,7 @@
     return `rgb(${Math.round(r*s+255*(1-s))},${Math.round(g*s+255*(1-s))},${Math.round(b*s+255*(1-s))})`;
   }
 
-  // --- Pieces data and normalization ---
-  const pieces = [
+  const pieces = [ // coords in local space
     { name:"V", coords:[[0,0,0],[0,0,1],[0,1,0]], color:"#e6194B" },
     { name:"L", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,0]], color:"#3cb44b" },
     { name:"T", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,1]], color:"#4363d8" },
@@ -66,158 +63,160 @@
     p.norm = p.coords.map(c=>[c[0]-mins[0],c[1]-mins[1],c[2]-mins[2]]);
   });
 
-  // --- Render & interaction for pieces ---
-  let selected = null, selectedAnchor = null;
-  const piecesDiv = document.getElementById("pieces");
+  // --- Piece canvases ---
+  let selected=null, selectedAnchor=null;
+  const piecesDiv=document.getElementById('pieces');
+
+  function projectPiece(pt, rotX, rotY, offset) {
+    let [x,y,z]=pt; x-=offset[0]; y-=offset[1];
+    const cY=Math.cos(rotY), sY=Math.sin(rotY);
+    let dx=cY*x + sY*z, dz=-sY*x + cY*z;
+    const cX=Math.cos(rotX), sX=Math.sin(rotX);
+    let dy=cX*y - sX*dz, dz2=sX*y + cX*dz;
+    return { x:100+dx*60, y:100-dy*60, depth:dz2 };
+  }
 
   pieces.forEach((p,idx)=>{
-    const fig = document.createElement("figure");
-    const cap = document.createElement("figcaption"); cap.textContent = p.name;
-    const cv = document.createElement("canvas"); cv.className = "piece"; cv.width = cv.height = 200;
+    const fig=document.createElement('figure'), cap=document.createElement('figcaption'); cap.textContent=p.name;
+    const cv=document.createElement('canvas'); cv.className='piece'; cv.width=cv.height=200;
     fig.append(cap,cv); piecesDiv.append(fig);
-    const ctx = cv.getContext("2d");
-
+    const ctx=cv.getContext('2d');
     let rotX=Math.PI/6, rotY=-Math.PI/6;
-    const n = p.norm.length;
-    const cx = p.norm.reduce((s,c)=>s+c[0],0)/n;
-    const cy = p.norm.reduce((s,c)=>s+c[1],0)/n;
+    const n=p.norm.length;
+    const offset=[p.norm.reduce((s,c)=>s+c[0],0)/n, p.norm.reduce((s,c)=>s+c[1],0)/n, p.norm.reduce((s,c)=>s+c[2],0)/n];
 
-    function project(pt){
-      let [x,y,z]=pt; x-=cx; y-=cy;
-      const cY=Math.cos(rotY), sY=Math.sin(rotY);
-      let dx=cY*x + sY*z, dz=-sY*x + cY*z;
-      const cX=Math.cos(rotX), sX=Math.sin(rotX);
-      let dy2=cX*y - sX*dz, dz2=sX*y + cX*dz;
-      return { x:100+dx*60, y:100-dy2*60, depth:dz2 };
-    }
-
-    function drawPiece(){
+    function draw(){
       ctx.clearRect(0,0,200,200);
-      p.norm.map(c0=>({c0,depth:project(c0).depth}))
+      p.norm.map(c0=>({c0,depth:projectPiece(c0,rotX,rotY,offset).depth}))
         .sort((a,b)=>a.depth-b.depth)
         .forEach(d=>{
           faces.forEach(f=>{
-            const pts = f.verts.map(v=>project([d.c0[0]+v[0],d.c0[1]+v[1],d.c0[2]+v[2]]));
+            const pts=f.verts.map(v=>projectPiece([d.c0[0]+v[0],d.c0[1]+v[1],d.c0[2]+v[2]],rotX,rotY,offset));
             ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
             pts.slice(1).forEach(p2=>ctx.lineTo(p2.x,p2.y));
-            ctx.closePath();
-            ctx.fillStyle = shadeColor(p.color,f.shade); ctx.fill();
-            ctx.strokeStyle = "#333"; ctx.stroke();
+            ctx.closePath(); ctx.fillStyle=shadeColor(p.color,f.shade); ctx.fill(); ctx.strokeStyle='#333'; ctx.stroke();
           });
         });
-      // highlight anchor
-      if (selected===idx && selectedAnchor!=null) {
-        const c0 = p.norm[selectedAnchor];
-        const pr = project([c0[0]+0.5, c0[1]+0.5, c0[2]+0.5]);
-        ctx.beginPath(); ctx.arc(pr.x, pr.y, 8, 0, 2*Math.PI);
-        ctx.strokeStyle = 'crimson'; ctx.lineWidth = 3; ctx.stroke();
+      // draw anchor highlight
+      if(selected===idx && selectedAnchor!=null) {
+        const c0=p.norm[selectedAnchor];
+        const pr=projectPiece([c0[0]+0.5,c0[1]+0.5,c0[2]+0.5],rotX,rotY,offset);
+        ctx.beginPath(); ctx.arc(pr.x,pr.y,6,0,2*Math.PI);
+        ctx.strokeStyle='crimson'; ctx.lineWidth=2; ctx.stroke();
       }
     }
-    drawPiece();
+    draw();
 
-    // rotate
-    let dragging=false, lx=0, ly=0;
-    cv.addEventListener("mousedown", e=>{ dragging=true; lx=e.clientX; ly=e.clientY; });
-    window.addEventListener("mousemove", e=>{
-      if(!dragging) return;
-      rotY+=(e.clientX-lx)*0.01; rotX+=(e.clientY-ly)*0.01; lx=e.clientX; ly=e.clientY; drawPiece();
-    });
-    window.addEventListener("mouseup", ()=>dragging=false);
+    // rotation
+    let drag=false, lx=0, ly=0;
+    cv.addEventListener('mousedown',e=>{ drag=true; lx=e.clientX; ly=e.clientY; });
+    window.addEventListener('mousemove',e=>{ if(!drag) return; rotY+=(e.clientX-lx)*0.01; rotX+=(e.clientY-ly)*0.01; lx=e.clientX; ly=e.clientY; draw(); });
+    window.addEventListener('mouseup',()=>drag=false);
 
-    // pick anchor cubie
-    cv.addEventListener("click", e=>{
-      const rect=cv.getBoundingClientRect();
-      const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    // select anchor
+    cv.addEventListener('click',e=>{
+      const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
       let best=null, bd=Infinity;
-      p.norm.forEach((c0,ci)=>{
-        const pr=project([c0[0]+0.5,c0[1]+0.5,c0[2]+0.5]);
-        const d=(pr.x-x)**2+(pr.y-y)**2;
-        if(d<bd){bd=d; best=ci;}
+      p.norm.forEach((c0,i)=>{
+        const pr=projectPiece([c0[0]+0.5,c0[1]+0.5,c0[2]+0.5],rotX,rotY,offset);
+        const d=(pr.x-mx)**2+(pr.y-my)**2;
+        if(d<bd){bd=d; best=i;}
       });
       selected=idx; selectedAnchor=best;
-      document.querySelectorAll("canvas.piece").forEach(c=>c.classList.remove("selected"));
-      cv.classList.add("selected"); drawPiece();
+      document.querySelectorAll('canvas.piece').forEach(c=>c.classList.remove('selected'));
+      cv.classList.add('selected'); draw();
     });
   });
 
-  // --- Solver grid & placement ---
-  const solver=document.getElementById("solver"), sCtx=solver.getContext("2d");
+  // --- Solver canvas ---
+  const solver=document.getElementById('solver'), sCtx=solver.getContext('2d');
   solver.width=solver.height=400;
-  let sRotX=Math.PI/6, sRotY=-Math.PI/6, gridDrag=false, gx=0, gy=0;
+  let sRotX=Math.PI/6, sRotY=-Math.PI/6, gdrag=false, gx=0, gy=0;
   const occupied={}, placements=[];
 
   function projectG([x,y,z]){
     const cY=Math.cos(sRotY), sY=Math.sin(sRotY);
-    let dx=cY*x+sY*z, dz=-sY*x+cY*z;
+    let dx=cY*x + sY*z, dz=-sY*x + cY*z;
     const cX=Math.cos(sRotX), sX=Math.sin(sRotX);
-    let dy=cX*y-sX*dz, dz2=sX*y+cX*dz;
+    let dy=cX*y - sX*dz, dz2=sX*y + cX*dz;
     return { x:200+dx*50, y:200-dy*50, depth:dz2 };
   }
 
   function drawSolver(){
-    sCtx.clearRect(0,0,400,400); sCtx.strokeStyle="#888";
+    sCtx.clearRect(0,0,400,400); sCtx.strokeStyle='#888';
+    // grid
     for(let i=0;i<=3;i++) for(let j=0;j<=3;j++){
       [[0,i,j,3,i,j],[i,0,j,i,3,j],[i,j,0,i,j,3]].forEach(([x0,y0,z0,x1,y1,z1])=>{
         const p0=projectG([x0,y0,z0]), p1=projectG([x1,y1,z1]);
         sCtx.beginPath(); sCtx.moveTo(p0.x,p0.y); sCtx.lineTo(p1.x,p1.y); sCtx.stroke();
       });
     }
+    // pieces
     const all=[];
     placements.forEach(pl=>{
       pieces[pl.idx].norm.forEach(c0=>{
         const wx=pl.origin[0]+c0[0], wy=pl.origin[1]+c0[1], wz=pl.origin[2]+c0[2];
-        all.push({wx,wy,wz,depth:projectG([wx,wy,wz]).depth, color:pieces[pl.idx].color});
+        all.push({wx,wy,wz,depth:projectG([wx,wy,wz]).depth,color:pieces[pl.idx].color});
       });
     });
     all.sort((a,b)=>a.depth-b.depth).forEach(d=>{
       faces.forEach(f=>{
-        const key=[d.wx+f.normal[0],d.wy+f.normal[1],d.wz+f.normal[2]].join(",");
-        if(occupied[key]!=null) return;
+        // always draw all faces for a full cubie look
         const pts=f.verts.map(v=>projectG([d.wx+v[0],d.wy+v[1],d.wz+v[2]]));
         sCtx.beginPath(); sCtx.moveTo(pts[0].x,pts[0].y);
         pts.slice(1).forEach(p2=>sCtx.lineTo(p2.x,p2.y));
-        sCtx.closePath(); sCtx.fillStyle=shadeColor(d.color,f.shade); sCtx.fill(); sCtx.strokeStyle="#333"; sCtx.stroke();
+        sCtx.closePath(); sCtx.fillStyle=shadeColor(d.color,f.shade); sCtx.fill(); sCtx.strokeStyle='#333'; sCtx.stroke();
       });
     });
   }
 
   // rotate grid
-  solver.addEventListener("mousedown", e=>{ gridDrag=true; gx=e.clientX; gy=e.clientY; });
-  window.addEventListener("mousemove", e=>{
-    if(!gridDrag) return;
-    sRotY+=(e.clientX-gx)*0.01; sRotX+=(e.clientY-gy)*0.01; gx=e.clientX; gy=e.clientY; drawSolver();
-  });
-  window.addEventListener("mouseup", ()=>gridDrag=false);
+  solver.addEventListener('mousedown',e=>{ gdrag=true; gx=e.clientX; gy=e.clientY; });
+  window.addEventListener('mousemove',e=>{ if(!gdrag) return; sRotY+=(e.clientX-gx)*0.01; sRotX+=(e.clientY-gy)*0.01; gx=e.clientX; gy=e.clientY; drawSolver(); });
+  window.addEventListener('mouseup',()=>gdrag=false);
 
-  // place by anchor
-  solver.addEventListener("click", e=>{
-    if(selected==null||selectedAnchor==null) return;
-    const rect=solver.getBoundingClientRect();
-    const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+  // click to place or remove
+  solver.addEventListener('click',e=>{
+    const rect=solver.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    // find nearest cell center
     let bestCell=null, bd=Infinity;
     for(let x=0;x<3;x++) for(let y=0;y<3;y++) for(let z=0;z<3;z++){
       const pr=projectG([x+0.5,y+0.5,z+0.5]);
-      const d=(pr.x-cx)**2+(pr.y-cy)**2;
+      const d=(pr.x-mx)**2+(pr.y-my)**2;
       if(d<bd){bd=d; bestCell=[x,y,z];}
     }
     if(!bestCell) return;
-    const c0=pieces[selected].norm[selectedAnchor];
-    const origin=[bestCell[0]-c0[0],bestCell[1]-c0[1],bestCell[2]-c0[2]];
-    // bounds & overlap
-    for(const c of pieces[selected].norm){
-      const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
-      if(wx<0||wx>2||wy<0||wy>2||wz<0||wz>2) return;
-      if(occupied[[wx,wy,wz].join(",")]!=null) return;
+    const key=bestCell.join(',');
+    // removal if occupied and no anchor selected
+    if(occupied[key]!=null && (selected===null || selectedAnchor===null)){
+      const rem=occupied[key];
+      // clear all occupied for that piece
+      for(const k in occupied) if(occupied[k]===rem) delete occupied[k];
+      // remove from placements
+      for(let i=placements.length-1;i>=0;i--) if(placements[i].idx===rem) placements.splice(i,1);
+      drawSolver(); return;
     }
-    pieces[selected].norm.forEach(c=>{
-      const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
-      occupied[[wx,wy,wz].join(",")]=selected;
-    });
-    placements.push({idx:selected, origin});
-    // reset selection
-    document.querySelectorAll("canvas.piece").forEach(c=>c.classList.remove("selected"));
-    selected=null; selectedAnchor=null;
-    drawSolver();
+    // placement
+    if(selected!=null && selectedAnchor!=null){
+      const c0=pieces[selected].norm[selectedAnchor];
+      const origin=[bestCell[0]-c0[0], bestCell[1]-c0[1], bestCell[2]-c0[2]];
+      // bounds & overlap
+      for(const c of pieces[selected].norm){
+        const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
+        if(wx<0||wx>2||wy<0||wy>2||wz<0||wz>2) return;
+        if(occupied[[wx,wy,wz].join(',')]!=null) return;
+      }
+      // commit
+      pieces[selected].norm.forEach(c=>{
+        const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
+        occupied[[wx,wy,wz].join(',')]=selected;
+      });
+      placements.push({idx:selected,origin});
+      // reset
+      document.querySelectorAll('canvas.piece').forEach(c=>c.classList.remove('selected'));
+      selected=null; selectedAnchor=null;
+      drawSolver();
+    }
   });
 
   drawSolver();
