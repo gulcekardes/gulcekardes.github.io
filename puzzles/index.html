@@ -10,7 +10,8 @@
     body {
       font-family: Palatino, serif;
       background: #fafafa;
-      overflow-y: scroll;
+      color: #333;
+      line-height: 1.4;
     }
     header {
       background: white;
@@ -18,8 +19,7 @@
       text-align: center;
       font-family: Palatino, serif;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      position: sticky; top: 0;
-      z-index: 10;
+      position: sticky; top: 0; z-index: 10;
     }
     .nav-links a {
       margin: 0 10px;
@@ -29,31 +29,51 @@
       font-family: Palatino, serif;
     }
     .nav-links a.active { font-weight: bold; }
+    main {
+      padding: 1rem;
+    }
+    h2 {
+      font-family: Palatino, serif;
+      margin: 1.5rem 0 0.5rem;
+      font-size: 1.5rem;
+      text-align: center;
+    }
     #pieces {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      padding: 1rem;
       justify-content: flex-start;
     }
     figure {
-      width: 200px;
+      width: 300px;
       text-align: center;
       margin: 0;
     }
     figcaption {
       font-family: Palatino, serif;
       font-weight: bold;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
     }
     canvas {
-      width: 200px;
-      height: 200px;
       display: block;
-      cursor: grab;
+      margin: 0 auto;
       background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
-    canvas:active { cursor: grabbing; }
+    canvas.piece {
+      width: 300px;
+      height: 300px;
+      cursor: grab;
+    }
+    canvas.piece:active {
+      cursor: grabbing;
+    }
+    #solver-canvas {
+      width: 400px;
+      height: 400px;
+      margin: 0 auto 2rem;
+      cursor: default;
+    }
   </style>
 </head>
 <body>
@@ -65,10 +85,16 @@
     </div>
   </header>
 
-  <div id="pieces"></div>
+  <main>
+    <h2>The 7 Soma Pieces</h2>
+    <div id="pieces"></div>
+
+    <h2>Soma Cube</h2>
+    <canvas id="solver-canvas" width="400" height="400"></canvas>
+  </main>
 
   <script>
-  // --- JSON definition (with Z ↔ P swapped) ---
+  // --- JSON definition of the 7 Soma pieces (Z↔P swapped) ---
   const pieces = [
     { name:"V", coords:[[0,0,0],[0,0,1],[0,1,0]],             color:"#e6194B" },
     { name:"L", coords:[[0,0,0],[0,0,1],[0,0,2],[0,1,0]],     color:"#3cb44b" },
@@ -79,15 +105,13 @@
     { name:"Z", coords:[[0,0,0],[0,0,1],[0,1,1],[0,1,2]],     color:"#f032e6" }  // was P
   ];
 
-  // faces to draw: top, front, right, left with normals & shading
+  // faces: top, front, right, left (with normals and shading)
   const faces = [
-    { verts:[[0,1,0],[1,1,0],[1,1,1],[0,1,1]], normal:[0,1,0], shade:1.00 },  // top
-    { verts:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]], normal:[0,0,1], shade:0.85 },  // front
-    { verts:[[1,0,0],[1,0,1],[1,1,1],[1,1,0]], normal:[1,0,0], shade:0.75 },  // right
-    { verts:[[0,0,0],[0,0,1],[0,1,1],[0,1,0]], normal:[-1,0,0], shade:0.65 }  // left
+    { verts:[[0,1,0],[1,1,0],[1,1,1],[0,1,1]], normal:[0,1,0], shade:1.00 },
+    { verts:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]], normal:[0,0,1], shade:0.85 },
+    { verts:[[1,0,0],[1,0,1],[1,1,1],[1,1,0]], normal:[1,0,0], shade:0.75 },
+    { verts:[[0,0,0],[0,0,1],[0,1,1],[0,1,0]], normal:[-1,0,0], shade:0.65 }
   ];
-
-  const container = document.getElementById("pieces");
 
   // shade a hex toward white
   function shadeColor(hex,s){
@@ -100,14 +124,17 @@
     return `rgb(${nr},${ng},${nb})`;
   }
 
-  // build each piece
-  pieces.forEach(p => {
-    const fig = document.createElement("figure"),
-          cap = document.createElement("figcaption"),
-          canvas = document.createElement("canvas");
+  // Build piece figures
+  const container = document.getElementById("pieces");
+  pieces.forEach(p=>{
+    const fig = document.createElement("figure");
+    const cap = document.createElement("figcaption");
     cap.textContent = p.name;
-    canvas.width = 200; canvas.height = 200;
     fig.appendChild(cap);
+
+    const canvas = document.createElement("canvas");
+    canvas.classList.add("piece");
+    canvas.width = 300; canvas.height = 300;
     fig.appendChild(canvas);
     container.appendChild(fig);
 
@@ -115,25 +142,25 @@
     const coordSet = new Set(p.coords.map(c=>c.join(",")));
 
     // centroid for centering
-    const n = p.coords.length;
+    const n=p.coords.length;
     const cx3 = p.coords.reduce((s,c)=>s+c[0],0)/n,
           cy3 = p.coords.reduce((s,c)=>s+c[1],0)/n,
           cz3 = p.coords.reduce((s,c)=>s+c[2],0)/n;
 
-    // rotation
+    // rotation state
     let rotX=Math.PI/6, rotY=-Math.PI/6;
     let dragging=false, lastX=0, lastY=0;
 
-    function project([x,y,z]){
-      // translate to center
-      x -= cx3; y -= cy3; z -= cz3;
+    function project(pt){
+      let [x,y,z]=pt;
+      x-=cx3; y-=cy3; z-=cz3;
       // rotate Y
       const cY=Math.cos(rotY), sY=Math.sin(rotY);
-      let dx = cY*x + sY*z, dz = -sY*x + cY*z, dy=y;
+      let dx=cY*x + sY*z, dz=-sY*x + cY*z, dy=y;
       // rotate X
       const cX=Math.cos(rotX), sX=Math.sin(rotX);
-      let dy2 = cX*dy - sX*dz, dz2 = sX*dy + cX*dz;
-      const scale = 40;
+      let dy2=cX*dy - sX*dz, dz2=sX*dy + cX*dz;
+      const scale=60;
       return {
         x: canvas.width/2 + dx*scale,
         y: canvas.height/2 - dy2*scale,
@@ -142,62 +169,119 @@
     }
 
     function draw(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      // collect all cube centers with depth
-      const cells = p.coords.map(c0 => {
-        const pr = project(c0);
+      ctx.clearRect(0,0,300,300);
+      // collect cubes with depth
+      const cells = p.coords.map(c0=>{
+        const pr=project(c0);
         return { orig:c0, depth:pr.depth };
       });
-      // sort back→front
-      cells.sort((a,b)=> a.depth - b.depth);
-
-      // draw faces of each cube
-      cells.forEach(cData => {
-        faces.forEach(f => {
-          // skip if neighbor exists (internal face)
-          const nb = [
-            cData.orig[0]+f.normal[0],
-            cData.orig[1]+f.normal[1],
-            cData.orig[2]+f.normal[2]
-          ].join(",");
+      cells.sort((a,b)=>a.depth-b.depth);
+      // draw faces
+      cells.forEach(d=>{
+        faces.forEach(f=>{
+          const nb=[d.orig[0]+f.normal[0],
+                    d.orig[1]+f.normal[1],
+                    d.orig[2]+f.normal[2]].join(",");
           if(coordSet.has(nb)) return;
-
-          // draw polygon
-          const pts = f.verts.map(v=>
-            project([
-              cData.orig[0]+v[0],
-              cData.orig[1]+v[1],
-              cData.orig[2]+v[2]
-            ])
+          const pts=f.verts.map(v=>
+            project([d.orig[0]+v[0], d.orig[1]+v[1], d.orig[2]+v[2]])
           );
           ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
+          ctx.moveTo(pts[0].x,pts[0].y);
           pts.slice(1).forEach(p2=>ctx.lineTo(p2.x,p2.y));
           ctx.closePath();
-          ctx.fillStyle = shadeColor(p.color, f.shade);
+          ctx.fillStyle=shadeColor(p.color,f.shade);
           ctx.fill();
-          ctx.strokeStyle = "#333";
+          ctx.strokeStyle="#333";
           ctx.stroke();
         });
       });
     }
 
     // drag to rotate
-    canvas.addEventListener("mousedown", e=>{
+    canvas.addEventListener("mousedown",e=>{
       dragging=true; lastX=e.clientX; lastY=e.clientY;
     });
-    window.addEventListener("mousemove", e=>{
+    window.addEventListener("mousemove",e=>{
       if(!dragging) return;
       rotY += (e.clientX-lastX)*0.01;
       rotX += (e.clientY-lastY)*0.01;
       lastX=e.clientX; lastY=e.clientY;
       draw();
     });
-    window.addEventListener("mouseup", ()=>dragging=false);
-    window.addEventListener("mouseleave", ()=>dragging=false);
+    window.addEventListener("mouseup",()=>dragging=false);
+    window.addEventListener("mouseleave",()=>dragging=false);
 
     draw();
   });
+
+  // --- Draw empty 3×3×3 grid in solver canvas ---
+  const sCanvas = document.getElementById("solver-canvas"),
+        sCtx    = sCanvas.getContext("2d");
+  let w=400,h=400,cx=w/2,cy=h/2;
+
+  let sRotX=Math.PI/6, sRotY=-Math.PI/6;
+  function projectS([x,y,z]){
+    // rotate Y
+    const cY=Math.cos(sRotY), sY=Math.sin(sRotY);
+    let dx=cY*x + sY*z, dz=-sY*x + cY*z, dy=y;
+    // rotate X
+    const cX=Math.cos(sRotX), sX=Math.sin(sRotX);
+    let dy2=cX*dy - sX*dz, dz2=sX*dy + cX*dz;
+    const scale=60;
+    return { x:cx+dx*scale, y:cy-dy2*scale };
+  }
+  function drawGrid(){
+    sCtx.clearRect(0,0,w,h);
+    sCtx.strokeStyle="#888";
+    sCtx.lineWidth=1;
+    // draw lines x-direction for y,z
+    for(let y=0;y<=3;y++){
+      for(let z=0;z<=3;z++){
+        const p0=projectS([0,y,z]), p1=projectS([3,y,z]);
+        sCtx.beginPath();
+        sCtx.moveTo(p0.x,p0.y);
+        sCtx.lineTo(p1.x,p1.y);
+        sCtx.stroke();
+      }
+    }
+    // y-direction for x,z
+    for(let x=0;x<=3;x++){
+      for(let z=0;z<=3;z++){
+        const p0=projectS([x,0,z]), p1=projectS([x,3,z]);
+        sCtx.beginPath();
+        sCtx.moveTo(p0.x,p0.y);
+        sCtx.lineTo(p1.x,p1.y);
+        sCtx.stroke();
+      }
+    }
+    // z-direction for x,y
+    for(let x=0;x<=3;x++){
+      for(let y=0;y<=3;y++){
+        const p0=projectS([x,y,0]), p1=projectS([x,y,3]);
+        sCtx.beginPath();
+        sCtx.moveTo(p0.x,p0.y);
+        sCtx.lineTo(p1.x,p1.y);
+        sCtx.stroke();
+      }
+    }
+  }
+  // drag to rotate solver grid
+  let dragging=false, lX=0,lY=0;
+  sCanvas.addEventListener("mousedown",e=>{
+    dragging=true; lX=e.clientX; lY=e.clientY;
+  });
+  window.addEventListener("mousemove",e=>{
+    if(!dragging) return;
+    sRotY += (e.clientX-lX)*0.01;
+    sRotX += (e.clientY-lY)*0.01;
+    lX=e.clientX; lY=e.clientY;
+    drawGrid();
+  });
+  window.addEventListener("mouseup",()=>dragging=false);
+  window.addEventListener("mouseleave",()=>dragging=false);
+
+  drawGrid();
   </script>
 </body>
 </html>
