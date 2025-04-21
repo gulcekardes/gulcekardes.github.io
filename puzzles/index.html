@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Gülce Kardeş – Puzzles</title>
-  <!-- Google Fonts: Volkorn & Mate -->
+  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Volkorn:wght@400;700&family=Mate:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -48,11 +48,13 @@
 
   <div id="overlay">Solution found!</div>
 
+  <!-- Three.js and controls -->
   <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
   <script src="https://unpkg.com/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
   <script src="https://unpkg.com/three@0.150.1/examples/js/controls/DragControls.js"></script>
+
   <script>
-    // (Same Three.js setup and Soma‐cube code as before)
+    // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 1000);
     camera.position.set(8, 8, 8);
@@ -60,67 +62,93 @@
     renderer.setSize(innerWidth, innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    // Orbit controls
     const orbit = new THREE.OrbitControls(camera, renderer.domElement);
     orbit.enableDamping = true;
-    scene.add(new THREE.AmbientLight(0xffffff, .6));
-    const dir = new THREE.DirectionalLight(0xffffff, .8);
-    dir.position.set(10,20,10);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(10, 20, 10);
     scene.add(dir);
 
-    // Frame
-    const boxGeo = new THREE.BoxGeometry(3,3,3);
-    const wire = new THREE.WireframeGeometry(boxGeo);
+    // 3×3×3 frame
+    const frameGeo = new THREE.BoxGeometry(3, 3, 3);
+    const wire = new THREE.WireframeGeometry(frameGeo);
     const frame = new THREE.LineSegments(wire, new THREE.LineBasicMaterial({color:0x333333}));
-    frame.position.set(0,1.5,0);
+    frame.position.set(0, 1.5, 0);
     scene.add(frame);
 
-    // Pieces
-    const piecesDef = [ /* coords + colors as before */ ];
+    // Soma pieces definitions
+    const piecesDef = [
+      // V
+      { coords:[[0,0,0],[1,0,0],[0,1,0],[0,0,1]], color:0xe6194B },
+      // L
+      { coords:[[0,0,0],[1,0,0],[2,0,0],[0,1,0]], color:0x3cb44b },
+      // T
+      { coords:[[0,0,0],[1,0,0],[2,0,0],[1,1,0]], color:0x4363d8 },
+      // Z
+      { coords:[[0,0,0],[1,0,0],[1,1,0],[2,1,0]], color:0xf58231 },
+      // A (left‐arm)
+      { coords:[[0,0,0],[1,0,0],[2,0,0],[0,1,0]], color:0x911eb4, rotate:true },
+      // B (right‐arm)
+      { coords:[[0,0,0],[1,0,0],[2,0,0],[2,1,0]], color:0x46f0f0 },
+      // P (square)
+      { coords:[[0,0,0],[1,0,0],[0,1,0],[1,1,0]], color:0xf032e6 }
+    ];
+
+    // Build meshes
     const pieceMeshes = [];
-    piecesDef.forEach((pd,i) => {
-      const g = new THREE.Group();
-      pd.coords.forEach(c=>{
+    piecesDef.forEach((pd, i) => {
+      const grp = new THREE.Group();
+      pd.coords.forEach(c => {
         const cube = new THREE.Mesh(
           new THREE.BoxGeometry(1,1,1),
           new THREE.MeshStandardMaterial({color: pd.color})
         );
-        cube.position.set(c[0],c[1],c[2]);
-        g.add(cube);
+        cube.position.set(c[0], c[1], c[2]);
+        grp.add(cube);
       });
-      if (pd.rotate) g.rotation.y = Math.PI/2;
-      g.position.set(5 + (i%2)*2, 0, -4 + Math.floor(i/2)*2);
-      scene.add(g);
-      pieceMeshes.push(g);
+      if (pd.rotate) grp.rotation.y = Math.PI/2;
+      // initial spread
+      grp.position.set(5 + (i%2)*2, 0, -4 + Math.floor(i/2)*2);
+      scene.add(grp);
+      pieceMeshes.push(grp);
     });
 
+    // Enable dragging
     const drag = new THREE.DragControls(pieceMeshes, camera, renderer.domElement);
-    drag.addEventListener('dragstart', ()=> orbit.enabled = false);
-    drag.addEventListener('dragend', e=>{
+    drag.addEventListener('dragstart', () => orbit.enabled = false);
+    drag.addEventListener('dragend', e => {
       orbit.enabled = true;
+      // snap to integer grid
       e.object.position.x = Math.round(e.object.position.x);
       e.object.position.y = Math.round(e.object.position.y);
       e.object.position.z = Math.round(e.object.position.z);
       checkSolution();
     });
 
+    // Check for a full 3×3×3 fill without overlap
     function checkSolution(){
-      const occ = {}, overlay = document.getElementById('overlay');
-      let cnt = 0;
-      for (let i=0;i<pieceMeshes.length;i++){
+      const occ = {};
+      let count = 0;
+      for (let i = 0; i < pieceMeshes.length; i++){
         const m = pieceMeshes[i], def = piecesDef[i];
         for (let c of def.coords){
           const wx = m.position.x + c[0],
                 wy = m.position.y + c[1],
                 wz = m.position.z + c[2],
                 key = `${wx}|${wy}|${wz}`;
-          if (wx<0||wx>2||wy<0||wy>2||wz<0||wz>2||occ[key]) return;
+          if (wx < 0 || wx > 2 || wy < 0 || wy > 2 || wz < 0 || wz > 2) return;
+          if (occ[key]) return;
           occ[key] = true;
-          cnt++;
+          count++;
         }
       }
-      if (cnt===27) overlay.style.display = 'block';
+      if (count === 27) document.getElementById('overlay').style.display = 'block';
     }
 
+    // Render loop
     function animate(){
       requestAnimationFrame(animate);
       orbit.update();
@@ -128,7 +156,8 @@
     }
     animate();
 
-    window.addEventListener('resize', ()=>{
+    // Resize handler
+    window.addEventListener('resize', () => {
       camera.aspect = innerWidth/innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(innerWidth, innerHeight);
