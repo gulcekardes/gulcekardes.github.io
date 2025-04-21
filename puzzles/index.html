@@ -160,7 +160,6 @@
 
     function drawPiece(){
       ctx.clearRect(0,0,cv.width,cv.height);
-      // sort cubes back→front
       const cells = p.norm.map(c0=>{
         const pr = project(c0);
         return {c0,depth:pr.depth};
@@ -279,12 +278,12 @@
   });
   window.addEventListener("mouseup",()=>dragG=false);
 
-  // place on click
-  solver.addEventListener("click",e=>{
+  // place on click with debug logging
+  solver.addEventListener("click", e => {
+    console.log("solver click; selected =", selected);
     if(selected==null) return;
     const rect=solver.getBoundingClientRect();
     const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
-    // find nearest cell
     let best=null, bd=Infinity;
     for(let x=0;x<3;x++)for(let y=0;y<3;y++)for(let z=0;z<3;z++){
       const pr=projectG([x,y,z]);
@@ -292,18 +291,15 @@
       if(d<bd){ bd=d; best=[x,y,z]; }
     }
     const origin=best, norm=pieces[selected].norm;
-    // validate
-    for(let c of norm){
+    for(const c of norm){
       const wx=origin[0]+c[0], wy=origin[1]+c[1], wz=origin[2]+c[2];
-      if(wx<0||wx>2||wy<0||wy>2||wz<0||wz>2) return;
+      if(wx<0||wx>2||wy<0||wy>2||wz<0||w0>2) return;
       if(occupied[[wx,wy,wz].join(",")]!=null) return;
     }
-    // commit placement
     norm.forEach(c=>{
       occupied[[origin[0]+c[0],origin[1]+c[1],origin[2]+c[2]].join(",")]=selected;
     });
     placements.push({idx:selected,origin});
-    // clear selection
     document.querySelectorAll("canvas.piece").forEach(c=>c.classList.remove("selected"));
     selected=null;
     drawSolver();
