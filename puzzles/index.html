@@ -1,210 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Gülce Kardeş – Soma Cube Solver</title>
+  <meta charset="UTF-8">
+  <title>3D Soma Cube Solver</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Palatino,serif;background:#fafafa}
-    header{background:white;padding:1rem;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.1);position:sticky;top:0;z-index:10}
-    .nav-links a{margin:0 10px;color:navy;text-decoration:none;font-size:1.1rem}
-    .nav-links a.active{font-weight:bold}
-    main{padding:1rem}
-    h2{margin:1.5rem 0 .5rem;font-size:1.5rem;text-align:center}
-    #pieces{display:flex;flex-wrap:wrap;gap:20px;justify-content:center}
-    figure{width:200px;text-align:center}
-    figcaption{margin-bottom:4px;font-weight:bold}
-    .rotate-btns{margin-top:4px}
-    .rotate-btns button{margin:0 4px;cursor:pointer}
-    canvas.piece{width:200px;height:200px;background:white;border:2px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
-    canvas.piece.selected{border-color:crimson}
-    #solver{display:block;width:400px;height:400px;margin:1rem auto;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:default}
-    #solver-controls{text-align:center;margin:.5rem 0}
-    #solver-controls button{margin:0 8px;cursor:pointer}
-    p.instructions{color:#555;text-align:center}
+    body { margin: 0; overflow: hidden; }
+    #info {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(255,255,255,0.8);
+      padding: 10px; font-family: sans-serif;
+      z-index: 10;
+    }
   </style>
+
+  <!-- three.js core -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/three.min.js"></script>
+  <!-- controls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/examples/js/controls/DragControls.js"></script>
 </head>
 <body>
-  <header>
-    <div class="nav-links">
-      <a href="../index.html">Home</a>
-      <a href="#" class="active">Puzzles</a>
-      <a href="https://scholar.google.com/citations?user=-io3rR0AAAAJ">Google Scholar</a>
-    </div>
-  </header>
-  <main>
-    <h2>The 7 Soma Pieces</h2>
-    <div id="pieces"></div>
-    <h2>Soma Cube Solver</h2>
-    <canvas id="solver" width="400" height="400"></canvas>
-    <div id="solver-controls">
-      <button id="rotXneg">↑</button>
-      <button id="rotXpos">↓</button>
-      <button id="rotYneg">←</button>
-      <button id="rotYpos">→</button>
-    </div>
-    <p class="instructions">
-      1) Click a cubie in a piece to select its anchor.<br>
-      2) Click rotate‐shape buttons (↺/↻) to apply real 90° rotations to the piece.<br>
-      3) Hover solver to highlight cell; click to place rotated piece or remove.<br>
-      4) Use solver‐view arrows to rotate board view.
-    </p>
-  </main>
+  <div id="info">
+    <strong>Instructions:</strong><br>
+    • Orbit: ⬅️ Drag background<br>
+    • Select/Drag piece: Left‐click on it<br>
+    • Rotate piece: R / T keys (yaw)  ⬆️/⬇️ arrows (pitch)<br>
+    • Drop: release mouse → snaps to grid if valid<br>
+  </div>
+
   <script>
-  // basic faces
-  const faces=[
-    {verts:[[0,1,0],[1,1,0],[1,1,1],[0,1,1]],normal:[0,1,0],shade:1},
-    {verts:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]],normal:[0,0,1],shade:.85},
-    {verts:[[1,0,0],[1,0,1],[1,1,1],[1,1,0]],normal:[1,0,0],shade:.75},
-    {verts:[[0,0,0],[0,0,1],[0,1,1],[0,1,0]],normal:[-1,0,0],shade:.65}
-  ];
-  function shadeColor(hex,s){
-    const r=parseInt(hex.substr(1,2),16),g=parseInt(hex.substr(3,2),16),b=parseInt(hex.substr(5,2),16);
-    return `rgba(${Math.round(r*s+255*(1-s))},${Math.round(g*s+255*(1-s))},${Math.round(b*s+255*(1-s))},1)`;
-  }
+    // set up renderer + scene + camera
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, .1, 1000);
+    camera.position.set(5, 7, 10);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5,10,7);
+    scene.add(dirLight);
 
-  // initialize pieces data
-  const raw=[
-    ['V',[[0,0,0],[0,0,1],[0,1,0]],'#e6194B'],
-    ['L',[[0,0,0],[0,0,1],[0,0,2],[0,1,0]],'#3cb44b'],
-    ['T',[[0,0,0],[0,0,1],[0,0,2],[0,1,1]],'#4363d8'],
-    ['P',[[0,0,0],[0,0,1],[0,1,0],[1,0,0]],'#f58231'],
-    ['A',[[0,0,0],[0,0,1],[0,1,0],[1,0,1]],'#911eb4'],
-    ['B',[[0,0,0],[0,0,1],[0,1,0],[1,1,0]],'#46f0f0'],
-    ['Z',[[0,0,0],[0,0,1],[0,1,1],[0,1,2]],'#f032e6']
-  ];
-  const pieces=raw.map(([name,coords,color])=>{
-    // normalize coords
-    const mins=coords.reduce((m,c)=>[Math.min(m[0],c[0]),Math.min(m[1],c[1]),Math.min(m[2],c[2])],[Infinity,Infinity,Infinity]);
-    const norm=coords.map(c=>[c[0]-mins[0],c[1]-mins[1],c[2]-mins[2]]);
-    return {name,color,base:norm,current:norm.slice()};
-  });
+    // grid helper for 3×3×3
+    const size = 3, divisions = 3;
+    const grid = new THREE.GridHelper(size, divisions, 0x444444, 0x888888);
+    grid.rotation.x = Math.PI/2;
+    grid.position.set(1.5, 0, 1.5);
+    scene.add(grid);
 
-  let selected=null,selectedAnchor=null;
-  const piecesDiv=document.getElementById('pieces');
-  const rotStep=Math.PI/12;
+    // orbit controls
+    const orbit = new THREE.OrbitControls(camera, renderer.domElement);
+    orbit.enableDamping = true;
 
-  // rotate function (90° about Y)
-  function rotateY90(coords,dir){
-    return coords.map(([x,y,z])=>dir>0?[z,y,-x]:[-z,y,x]);
-  }
+    // define piece shapes by list of cell offsets + colors
+    const raw = [
+      ['Z', [[0,0,0],[1,0,0],[1,1,0],[2,1,0]], 0x1f77b4],
+      ['P', [[0,0,0],[1,0,0],[0,1,0],[0,1,1]], 0xd62728],
+      ['T', [[0,0,0],[1,0,0],[2,0,0],[1,1,0]], 0x9467bd],
+      ['B', [[0,0,0],[1,0,0],[1,1,0],[1,1,1]], 0xff7f0e],
+      ['A', [[0,0,0],[1,0,0],[2,0,0],[2,1,0]], 0xbcbd22],
+      ['L', [[0,0,0],[1,0,0],[2,0,0],[0,1,0]], 0x2ca02c],
+      ['V', [[0,0,0],[0,1,0],[0,2,0],[1,0,0]], 0x8c564b]
+    ];
 
-  // projection for piece view
-  function projectPiece(pt,rotX,rotY,offset){
-    let [x,y,z]=pt; x-=offset[0];y-=offset[1];
-    const cY=Math.cos(rotY),sY=Math.sin(rotY),cX=Math.cos(rotX),sX=Math.sin(rotX);
-    let dx=cY*x+sY*z,dz=-sY*x+cY*z;
-    let dy=cX*y-sX*dz,dz2=sX*y+cX*dz;
-    return{ x:100+dx*60,y:100-dy*60,depth:dz2 };
-  }
-
-  // render each piece
-  pieces.forEach((p,i)=>{
-    const fig=document.createElement('figure');
-    const cap=document.createElement('figcaption');cap.textContent=p.name;
-    const cv=document.createElement('canvas');cv.width=cv.height=200;cv.className='piece';
-    const btns=document.createElement('div');btns.className='rotate-btns';
-    btns.innerHTML='<button>↺</button><button>↻</button>';
-    fig.append(cap,cv,btns);piecesDiv.append(fig);
-    const ctx=cv.getContext('2d');
-    let viewX=0,viewY=0;
-
-    function draw(){
-      ctx.clearRect(0,0,200,200);
-      // center offset in object space
-      const n=p.current.length;
-      const offset=[p.current.reduce((s,c)=>s+c[0],0)/n,p.current.reduce((s,c)=>s+c[1],0)/n,0];
-      // draw blocks
-      p.current.map(c0=>({c0,depth:projectPiece(c0,viewX,viewY,offset).depth}))
-        .sort((a,b)=>a.depth-b.depth)
-        .forEach(d=>faces.forEach(f=>{
-          const pts=f.verts.map(v=>projectPiece([d.c0[0]+v[0],d.c0[1]+v[1],d.c0[2]+v[2]],viewX,viewY,offset));
-          ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p2=>ctx.lineTo(p2.x,p2.y));ctx.closePath();
-          ctx.fillStyle=shadeColor(p.color,f.shade);ctx.fill();ctx.strokeStyle='#333';ctx.stroke();
-        }));
-      if(selected===i&&selectedAnchor!=null){
-        const c0=p.current[selectedAnchor];
-        const pr=projectPiece([c0[0]+.5,c0[1]+.5,c0[2]+.5],viewX,viewY,offset);
-        ctx.beginPath();ctx.arc(pr.x,pr.y,6,0,2*Math.PI);ctx.strokeStyle='crimson';ctx.lineWidth=2;ctx.stroke();
-      }
-    }
-    draw();
-
-    // piece rotation applies to coords
-    btns.children[0].addEventListener('click',()=>{p.current=rotateY90(p.current,-1);selectedAnchor=null;draw();});
-    btns.children[1].addEventListener('click',()=>{p.current=rotateY90(p.current,1);selectedAnchor=null;draw();});
-
-    // select anchor
-    cv.addEventListener('click',e=>{
-      const {left,top}=cv.getBoundingClientRect(),mx=e.clientX-left,my=e.clientY-top;
-      let best=null,bd=Infinity;
-      const n=p.current.length;
-      const offset=[p.current.reduce((s,c)=>s+c[0],0)/n,p.current.reduce((s,c)=>s+c[1],0)/n,0];
-      p.current.forEach((c0,ci)=>{
-        const pr=projectPiece([c0[0]+0.5,c0[1]+0.5,c0[2]+0.5],viewX,viewY,offset);
-        const d=(pr.x-mx)**2+(pr.y-my)**2; if(d<bd){bd=d;best=ci;}
+    const pieces = [];
+    raw.forEach(([name, cells, hex])=>{
+      const geom = new THREE.BoxGeometry(1,1,1);
+      const mat  = new THREE.MeshLambertMaterial({ color: hex });
+      const parent = new THREE.Object3D();
+      cells.forEach(([x,y,z])=>{
+        const cube = new THREE.Mesh(geom, mat);
+        cube.position.set(x+.5, y+.5, z+.5);
+        parent.add(cube);
       });
-      selected=i;selectedAnchor=best;
-      document.querySelectorAll('canvas.piece').forEach(c=>c.classList.remove('selected'));
-      cv.classList.add('selected');draw();
+      parent.name = name;
+      parent.userData.cells = cells;  // for collision checks
+      parent.position.set(-5 + Math.random()*2, 1, -2 + Math.random()*4);
+      scene.add(parent);
+      pieces.push(parent);
     });
-  });
 
-  // solver
-  const solver=document.getElementById('solver'),sCtx=solver.getContext('2d');solver.width=solver.height=400;
-  let sRotX=Math.PI/6,sRotY=-Math.PI/6;
-  const occupied={},placements=[];let hoverCell=null;
-
-  function projectG([x,y,z]){
-    const cY=Math.cos(sRotY),sY=Math.sin(sRotY),cX=Math.cos(sRotX),sX=Math.sin(sRotX);
-    let dx=cY*x+sY*z,dz=-sY*x+cY*z;
-    let dy=cX*y-sX*dz,dz2=sX*y+cX*dz;
-    return{x:200+dx*50,y:200-dy*50,depth:dz2};
-  }
-
-  function drawSolver(){
-    sCtx.clearRect(0,0,400,400);sCtx.strokeStyle='#888';
-    for(let i=0;i<=3;i++)for(let j=0;j<=3;j++)[[0,i,j,3,i,j],[i,0,j,i,3,j],[i,j,0,i,j,3]].forEach(([x0,y0,z0,x1,y1,z1])=>{
-      const p0=projectG([x0,y0,z0]),p1=projectG([x1,y1,z1]);
-      sCtx.beginPath();sCtx.moveTo(p0.x,p0.y);sCtx.lineTo(p1.x,p1.y);sCtx.stroke();
+    // drag controls
+    const dragControls = new THREE.DragControls(pieces, camera, renderer.domElement);
+    dragControls.addEventListener('dragstart', e=> orbit.enabled = false);
+    dragControls.addEventListener('dragend',   e=>{
+      orbit.enabled = true;
+      snapToGrid(e.object);
     });
-    if(hoverCell){const pr=projectG([hoverCell[0]+.5,hoverCell[1]+.5,hoverCell[2]+.5]);
-      sCtx.beginPath();sCtx.arc(pr.x,pr.y,10,0,2*Math.PI);sCtx.fillStyle='rgba(200,200,200,0.4)';sCtx.fill();}
-    const all=[];placements.forEach(pl=>{
-      pieces[pl.idx].current.forEach(c0=>all.push({
-        wx:pl.origin[0]+c0[0],wy:pl.origin[1]+c0[1],wz:pl.origin[2]+c0[2],depth:projectG([pl.origin[0]+c0[0],pl.origin[1]+c0[1],pl.origin[2]+c0[2]]).depth,color:pieces[pl.idx].color
-      }));
+
+    // snapping & collision check
+    function snapToGrid(piece){
+      const px = Math.round(piece.position.x - .5),
+            py = Math.round(piece.position.y - .5),
+            pz = Math.round(piece.position.z - .5);
+      const occ = new Set();
+      scene.children.forEach(obj=>{
+        if(obj.userData.placedCells)
+          obj.userData.placedCells.forEach(c=> occ.add(c.join()));
+      });
+      const newCells = [];
+      for(let [dx,dy,dz] of piece.userData.cells){
+        const cx = px+dx, cy = py+dy, cz = pz+dz;
+        if(cx<0||cx>2||cy<0||cy>2||cz<0||cz>2) return reset(piece);
+        if(occ.has([cx,cy,cz].join()))         return reset(piece);
+        newCells.push([cx,cy,cz]);
+      }
+      piece.position.set(px, py, pz);
+      piece.userData.placedCells = newCells;
+    }
+
+    function reset(piece){
+      piece.position.set(-5 + Math.random()*2, 1, -2 + Math.random()*4);
+      delete piece.userData.placedCells;
+    }
+
+    // keyboard rotation
+    window.addEventListener('keydown', e=>{
+      const dragging = dragControls.getDragging();
+      const hovered  = dragControls._hovered;
+      const active   = dragging || hovered;
+      if(!active) return;
+      const piece = active.object.parent;
+      const angle = Math.PI/2;
+      switch(e.key){
+        case 'r': piece.rotateY(angle); break;
+        case 't': piece.rotateY(-angle); break;
+        case 'ArrowUp':    piece.rotateX(angle); break;
+        case 'ArrowDown':  piece.rotateX(-angle); break;
+      }
     });
-    all.sort((a,b)=>a.depth-b.depth).forEach(d=>faces.forEach(f=>{
-      const pts=f.verts.map(v=>projectG([d.wx+v[0],d.wy+v[1],d.wz+v[2]]));
-      sCtx.beginPath();sCtx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p2=>sCtx.lineTo(p2.x,p2.y));sCtx.closePath();
-      sCtx.fillStyle=shadeColor(d.color,f.shade);sCtx.fill();sCtx.strokeStyle='#333';sCtx.stroke();
-    }));
-  }
 
-  // hover & reset & controls
-  solver.addEventListener('mousemove',e=>{const r=solver.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
-    let best=null,bd=Infinity;for(let x=0;x<3;x++)for(let y=0;y<3;y++)for(let z=0;z<3;z++){const pr=projectG([x+.5,y+.5,z+.5]),d=(pr.x-mx)**2+(pr.y-my)**2;if(d<bd){bd=d;best=[x,y,z];}}
-    hoverCell=best;drawSolver();});
-  solver.addEventListener('mouseleave',()=>{hoverCell=null;drawSolver();});
+    // render loop
+    function animate(){
+      requestAnimationFrame(animate);
+      orbit.update();
+      renderer.render(scene, camera);
+    }
+    animate();
 
-  document.getElementById('rotXneg').addEventListener('click',()=>{sRotX-=rotStep;drawSolver();});
-  document.getElementById('rotXpos').addEventListener('click',()=>{sRotX+=rotStep;drawSolver();});
-  document.getElementById('rotYneg').addEventListener('click',()=>{sRotY-=rotStep;drawSolver();});
-  document.getElementById('rotYpos').addEventListener('click',()=>{sRotY+=rotStep;drawSolver();});
-
-  solver.addEventListener('click',e=>{const r=solver.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;let best=null,bd=Infinity;
-    for(let x=0;x<3;x++)for(let y=0;y<3;y++)for(let z=0;z<3;z++){const pr=projectG([x+.5,y+.5,z+.5]),d=(pr.x-mx)**2+(pr.y-my)**2;if(d<bd){bd=d;best=[x,y,z];}}
-    if(!best)return;const key=best.join(',');
-    if(occupied[key]!=null&&(selected===null||selectedAnchor===null)){
-      const rem=occupied[key];for(const k in occupied)if(occupied[k]===rem)delete occupied[k];placements.splice(placements.findIndex(pl=>pl.idx===rem),1);drawSolver();return;}
-    if(selected!=null&&selectedAnchor!=null){const c0=pieces[selected].current[selectedAnchor];const origin=[best[0]-c0[0],best[1]-c0[1],best[2]-c0[2]];
-      if(pieces[selected].current.some(c=>{const wx=origin[0]+c[0],wy=origin[1]+c[1],wz=origin[2]+c[2];return wx<0||wx>2||wy<0||wy>2||wz<0||wz>2||occupied[[wx,wy,wz].join(',')]!=null;}))return;
-      pieces[selected].current.forEach(c=>{const wx=origin[0]+c[0],wy=origin[1]+c[1],wz=origin[2]+c[2];occupied[[wx,wy,wz].join(',')]=selected;});
-      placements.push({idx:selected,origin});selected=null;selectedAnchor=null;document.querySelectorAll('canvas.piece').forEach(c=>c.classList.remove('selected'));drawSolver();}
-  });
-  drawSolver();
+    window.addEventListener('resize', ()=>{
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   </script>
 </body>
 </html>
