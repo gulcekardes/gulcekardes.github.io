@@ -6,10 +6,9 @@
   <title>Gülce Kardeş – Home</title>
   <meta name="description" content="Gülce Kardeş — PhD student in theoretical computer science at CU Boulder and Graduate Fellow at the Santa Fe Institute." />
   <meta name="color-scheme" content="light dark" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Mate:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Corrected font names: Vollkorn & Mate -->
-  <link href="https://fonts.googleapis.com/css2?family=Vollkorn:wght@400;600;700&family=Mate:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Mate:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #fafafc;
@@ -71,12 +70,22 @@
 
     .brand { text-align: center; }
     .brand h1 {
-      font-family: 'Vollkorn', Georgia, serif;
-      margin: 0 0 6px;
+      font-family: 'Fraunces', Georgia, serif;
+      margin: 0 0 10px;
       font-weight: 600;
-      font-size: clamp(30px, 2.8vw + 16px, 44px);
-      letter-spacing: 0.3px;
-      line-height: 1.15;
+      font-optical-sizing: auto;
+      font-variation-settings: 'opsz' 72;
+      font-size: clamp(40px, 3.6vw + 18px, 60px);
+      letter-spacing: 0.1px;
+      line-height: 1.05;
+      font-variant-ligatures: common-ligatures;
+      text-rendering: optimizeLegibility;
+      display: inline-block;
+      padding-bottom: 6px;
+      background-image: linear-gradient(var(--accent), var(--accent));
+      background-position: 0 calc(100% + 2px);
+      background-repeat: no-repeat;
+      background-size: 56px 2px;
     }
     .brand p {
       margin: 0;
@@ -179,8 +188,7 @@
     <main id="main" class="card prose">
       <p>
         I am a PhD student in theoretical computer science at the University of Colorado, Boulder,
-        where I am advised by Joshua Grochow
-        and Rafael Frongillo.
+        where I am advised Joshua Grochow and Rafael Frongillo.
         I am also a Graduate Fellow at the Santa Fe Institute. My research focuses on understanding which problems can be solved efficiently across different models of computation, and what structural properties make certain problems fundamentally hard.
       </p>
       <p>
