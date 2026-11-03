@@ -223,6 +223,20 @@
 
     .empty-section { min-height: 24px; }
 
+    /* Balance the note between the heading and first paper. */
+    #tcs-heading + .field-note {
+      margin-top: 7px;
+      margin-bottom: 8px;
+    }
+
+    #tcs-heading ~ .empty-section {
+      display: none;
+    }
+
+    #tcs-heading ~ .paper-list .paper-item:first-child {
+      padding-top: 11px;
+    }
+
     /* Papers — no wreaths or leaf ornaments */
 
     .paper-list {
