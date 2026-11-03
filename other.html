@@ -223,7 +223,6 @@
 
     .empty-section { min-height: 24px; }
 
-    /* Papers — no wreaths or leaf ornaments */
 
     .paper-list {
       margin: 0;
@@ -267,8 +266,6 @@
       font-weight: 700;
     }
 
-    /* Publication details separated by whitespace, never dots */
-
     .publication-line {
       display: flex;
       flex-wrap: wrap;
@@ -292,8 +289,6 @@
     .publication-line a:hover {
       text-decoration-color: var(--olive);
     }
-
-    /* Footer — no horizontal rule above copyright */
 
     footer {
       display: grid;
@@ -417,11 +412,8 @@
         <li class="resource-item">
           <h3 class="resource-title">Columbia CS Theory Seminar</h3>
           <p class="resource-meta">
-            <!-- COLUMBIA SLIDES: Replace PASTE_GOOGLE_DRIVE_SHARE_LINK_HERE
-                 with the full link you copy from Google Drive.
-                 The link becomes active automatically after you replace it. -->
             <a id="columbia-slides-link"
-               href="PASTE_GOOGLE_DRIVE_SHARE_LINK_HERE"
+               href="https://drive.google.com/file/d/1yOFT-iXXhX8Vh6YKJpmU2vyJ-mBk-vXV/view?usp=sharing"
                target="_blank"
                rel="noopener noreferrer">Slides (Google Drive)</a>
           </p>
@@ -443,8 +435,6 @@
   </main>
 
   <script>
-    // Until you paste your Google Drive URL, show a quiet placeholder
-    // instead of sending visitors to a broken link.
     const columbiaSlides = document.getElementById("columbia-slides-link");
     if (columbiaSlides && columbiaSlides.getAttribute("href") === "PASTE_GOOGLE_DRIVE_SHARE_LINK_HERE") {
       columbiaSlides.removeAttribute("href");
