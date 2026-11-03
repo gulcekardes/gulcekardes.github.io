@@ -209,14 +209,25 @@
       line-height: 1.25;
     }
 
+    /* Talk title and date share a line with a small, flexible gap. */
+    .talk-details {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      column-gap: 0.65rem;
+      row-gap: 0;
+      margin: 0 0 4px;
+    }
+
     .talk-date {
-      margin: 0 0 3px;
+      margin: 0;
       color: var(--muted);
       font-size: 0.83rem;
+      font-style: normal;
     }
 
     .talk-title {
-      margin: 0 0 4px;
+      margin: 0;
       color: var(--ink-soft);
       font-size: 1rem;
       font-style: italic;
@@ -451,8 +462,10 @@
         <ul class="resource-list">
           <li class="resource-item">
             <h4 class="resource-title">Columbia University CS Theory Seminar</h4>
-            <p class="talk-date">October 30, 2026</p>
-            <p class="talk-title">Circuit Complexity of Group Isomorphism</p>
+            <div class="talk-details">
+              <p class="talk-title">Circuit Complexity of Group Isomorphism</p>
+              <p class="talk-date">October 30, 2026</p>
+            </div>
             <p class="resource-meta">
               <a id="columbia-slides-link"
                  href="https://drive.google.com/file/d/1yOFT-iXXhX8Vh6YKJpmU2vyJ-mBk-vXV/view?usp=sharing"
@@ -468,8 +481,10 @@
         <ul class="resource-list">
           <li class="resource-item">
             <h4 class="resource-title">Santa Fe Institute: Proofs and Reasons Workshop</h4>
-            <p class="talk-date">October 13, 2026</p>
-            <p class="talk-title">The (Computational) Complexity of Mathematical Thought</p>
+            <div class="talk-details">
+              <p class="talk-title">The (Computational) Complexity of Mathematical Thought</p>
+              <p class="talk-date">October 13, 2026</p>
+            </div>
             <p class="resource-meta">Video incoming soon.</p>
           </li>
         </ul>
