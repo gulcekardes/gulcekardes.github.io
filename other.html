@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Research — Other — Gülce Kardeş</title>
+  <meta
+    name="description"
+    content="Talks, slides, and other research materials by Gülce Kardeş."
+  >
+
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,700&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    :root {
+      --paper: #ffffff;
+      --ink: #29251f;
+      --ink-soft: #474038;
+      --muted: #776f65;
+      --burgundy: #753747;
+      --burgundy-deep: #522630;
+      --olive: #737a54;
+      --olive-deep: #555d3e;
+      --rule: #d9d2c6;
+      --page-width: 900px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "EB Garamond", Garamond, Georgia, serif;
+      font-size: 18px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    ::selection {
+      color: var(--burgundy-deep);
+      background: rgba(115, 122, 84, 0.18);
+    }
+
+    .page {
+      width: min(calc(100% - 52px), var(--page-width));
+      margin: 0 auto;
+      padding: 38px 0 44px;
+    }
+
+    /* Navigation — no horizontal rule underneath */
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 62px;
+    }
+
+    .nav-left {
+      display: flex;
+      gap: 29px;
+    }
+
+    .top-nav a {
+      position: relative;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.155em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 170ms ease;
+    }
+
+    .top-nav a::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -7px;
+      width: 0;
+      height: 1px;
+      background: var(--olive);
+      transform: translateX(-50%);
+      transition: width 170ms ease;
+    }
+
+    .top-nav a:hover,
+    .top-nav a.current { color: var(--burgundy); }
+
+    .top-nav a:hover::after,
+    .top-nav a.current::after { width: 100%; }
+
+    .top-nav .research-nav,
+    .top-nav .research-nav.current {
+      color: var(--olive-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 0.94rem;
+      font-weight: 600;
+      letter-spacing: 0.135em;
+    }
+
+    .top-nav .research-nav:hover { color: var(--burgundy); }
+
+    /* Page title */
+
+    .research-header { margin-bottom: 0; }
+
+    .research-header h1 {
+      margin: 0;
+      color: var(--burgundy-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: clamp(3.7rem, 8vw, 5.4rem);
+      font-weight: 500;
+      line-height: 0.9;
+      letter-spacing: -0.045em;
+    }
+
+    /* Quiet section navigation: Papers / Other */
+
+    .research-subnav {
+      display: flex;
+      align-items: baseline;
+      gap: 28px;
+      margin: 26px 0 49px;
+      font-family: "EB Garamond", Garamond, Georgia, serif;
+    }
+
+    .research-subnav a {
+      color: var(--muted);
+      font-size: 1.02rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      transition: color 170ms ease;
+    }
+
+    .research-subnav a:hover {
+      color: var(--burgundy);
+    }
+
+    .research-subnav a.current {
+      color: var(--olive-deep);
+      font-weight: 700;
+    }
+
+    .research-subnav + .research-section {
+      margin-top: 0;
+    }
+
+    /* Minimal talks / materials listing on the Other page */
+
+    .resource-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .resource-item {
+      padding: 15px 0 13px;
+    }
+
+    .resource-title {
+      margin: 0 0 4px;
+      color: var(--burgundy-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: clamp(1.3rem, 3vw, 1.55rem);
+      font-weight: 500;
+      line-height: 1.24;
+    }
+
+    .resource-meta {
+      color: var(--muted);
+      font-size: 0.83rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .resource-meta a {
+      color: var(--burgundy);
+      text-underline-offset: 3px;
+    }
+
+    /* Research sections */
+
+    .research-section { margin-top: 42px; }
+    .research-section + .research-section { margin-top: 54px; }
+
+    .section-heading {
+      margin: 0;
+      padding-bottom: 10px;
+      color: var(--olive-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 500;
+      letter-spacing: -0.012em;
+    }
+
+    .section-heading.primary {
+      font-size: clamp(2.1rem, 5vw, 2.7rem);
+    }
+
+    .section-heading.secondary {
+      font-size: clamp(1.65rem, 4vw, 2.05rem);
+    }
+
+    .field-note {
+      max-width: 690px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-style: italic;
+      line-height: 1.45;
+    }
+
+    .empty-section { min-height: 24px; }
+
+    /* Papers — no wreaths or leaf ornaments */
+
+    .paper-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .paper-item {
+      padding: 19px 0 20px;
+    }
+
+    .paper-title {
+      max-width: 760px;
+      margin: 0 0 3px;
+      color: var(--burgundy-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: clamp(1.28rem, 3vw, 1.55rem);
+      font-weight: 500;
+      line-height: 1.15;
+      letter-spacing: -0.006em;
+      text-wrap: pretty;
+    }
+
+    .paper-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .paper-title a:hover { color: var(--burgundy); }
+
+    .authors {
+      margin: 0 0 2px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-style: italic;
+      line-height: 1.35;
+    }
+
+    .authors strong {
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+
+    /* Publication details separated by whitespace, never dots */
+
+    .publication-line {
+      display: flex;
+      flex-wrap: wrap;
+      column-gap: 1.15rem;
+      row-gap: 0.1rem;
+      margin: 0;
+      color: var(--olive-deep);
+      font-size: 0.72rem;
+      line-height: 1.4;
+    }
+
+    .publication-line a {
+      color: var(--burgundy);
+      font-weight: 500;
+      text-decoration-line: underline;
+      text-decoration-color: rgba(117, 55, 71, 0.24);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .publication-line a:hover {
+      text-decoration-color: var(--olive);
+    }
+
+    /* Footer — no horizontal rule above copyright */
+
+    footer {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 42px;
+      align-items: end;
+      margin-top: 69px;
+      padding-top: 22px;
+      color: var(--muted);
+    }
+
+    footer p { margin: 0; }
+
+    .copyright {
+      white-space: nowrap;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+    }
+
+    .copyright strong {
+      color: var(--olive-deep);
+      font-weight: 500;
+    }
+
+    .typeface-note {
+      justify-self: end;
+      max-width: 560px;
+      color: #7d756b;
+      font-size: 0.82rem;
+      font-style: italic;
+      line-height: 1.45;
+      text-align: right;
+    }
+
+    .typeface-note .cormorant {
+      color: var(--burgundy-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 1.08em;
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    .typeface-note .eb-garamond {
+      color: var(--olive-deep);
+      font-family: "EB Garamond", Garamond, Georgia, serif;
+      font-size: 1.02em;
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    /* Mobile layout */
+
+    @media (max-width: 620px) {
+      body { font-size: 17px; }
+
+      .page {
+        width: calc(100% - 34px);
+        padding-top: 28px;
+      }
+
+      .top-nav { margin-bottom: 48px; }
+      .nav-left { gap: 18px; }
+      .top-nav a { font-size: 0.6rem; }
+      .top-nav .research-nav { font-size: 0.78rem; }
+      .research-header { margin-bottom: 0; }
+      .research-subnav { margin: 25px 0 43px; gap: 24px; }
+
+      .research-header h1 {
+        font-size: clamp(3.3rem, 16vw, 4.4rem);
+      }
+
+      .research-section,
+      .research-section + .research-section {
+        margin-top: 43px;
+      }
+
+      .paper-item { padding: 16px 0 17px; }
+      .paper-title { font-size: 1.28rem; }
+      .authors { font-size: 0.84rem; }
+      footer { display: block; }
+
+      .typeface-note {
+        max-width: none;
+        margin-top: 13px;
+        font-size: 0.78rem;
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+
+    <nav class="top-nav" aria-label="Main navigation">
+      <div class="nav-left">
+        <a href="index.html">Home</a>
+        <a
+          href="https://scholar.google.com/citations?user=-io3rR0AAAAJ"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Google Scholar</a>
+      </div>
+      <a href="research.html" class="research-nav current" aria-current="page">
+        Research
+      </a>
+    </nav>
+
+    <header class="research-header">
+      <h1>Research</h1>
+    </header>
+
+    <nav class="research-subnav" aria-label="Research pages">
+      <a href="research.html">Papers</a>
+      <a href="other.html" class="current" aria-current="page">Other</a>
+    </nav>
+
+    <section class="research-section" aria-labelledby="talks-heading">
+      <h2 class="section-heading secondary" id="talks-heading">Talks</h2>
+      <ul class="resource-list">
+        <li class="resource-item">
+          <h3 class="resource-title">Columbia CS Theory Seminar</h3>
+          <p class="resource-meta">
+            <!-- COLUMBIA SLIDES: Replace PASTE_GOOGLE_DRIVE_SHARE_LINK_HERE
+                 with the full link you copy from Google Drive.
+                 The link becomes active automatically after you replace it. -->
+            <a id="columbia-slides-link"
+               href="PASTE_GOOGLE_DRIVE_SHARE_LINK_HERE"
+               target="_blank"
+               rel="noopener noreferrer">Slides (Google Drive)</a>
+          </p>
+        </li>
+      </ul>
+    </section>
+
+    <footer>
+      <p class="copyright">
+        © 2026 <strong>Gülce Kardeş</strong>
+      </p>
+      <p class="typeface-note">
+        Set in two of my favorite typefaces:
+        <span class="cormorant">Cormorant Garamond</span>
+        and <span class="eb-garamond">EB Garamond</span>.
+      </p>
+    </footer>
+
+  </main>
+
+  <script>
+    // Until you paste your Google Drive URL, show a quiet placeholder
+    // instead of sending visitors to a broken link.
+    const columbiaSlides = document.getElementById("columbia-slides-link");
+    if (columbiaSlides && columbiaSlides.getAttribute("href") === "PASTE_GOOGLE_DRIVE_SHARE_LINK_HERE") {
+      columbiaSlides.removeAttribute("href");
+      columbiaSlides.textContent = "Slides — link coming soon";
+      columbiaSlides.style.color = "var(--muted)";
+      columbiaSlides.style.textDecoration = "none";
+    }
+  </script>
+</body>
+</html>
