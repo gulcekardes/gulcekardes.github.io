@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gülce Kardeş</title>
+  <meta name="description" content="Gülce Kardeş — PhD candidate at the University of Colorado Boulder and Graduate Fellow at the Santa Fe Institute.">
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --white: #ffffff;
+      --ink: #29251f;
+      --ink-soft: #474038;
+      --muted: #776f65;
+      --burgundy: #753747;
+      --burgundy-deep: #522630;
+      --olive: #737a54;
+      --olive-deep: #555d3e;
+      --olive-pale: #c8cbb6;
+      --rule: #d9d2c6;
+      --page-width: 1040px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-family: "EB Garamond", Garamond, Georgia, serif; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fff;
+      font-family: "EB Garamond", Garamond, Georgia, serif;
+      font-size: 18px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    ::selection { color: var(--burgundy-deep); background: rgba(115, 122, 84, .18); }
+    a { color: inherit; }
+    .page { width: min(calc(100% - 52px), var(--page-width)); margin: 0 auto; padding: 38px 0 42px; }
+    .top-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 64px; }
+    .nav-left { display: flex; gap: 29px; }
+    .top-nav a {
+      position: relative;
+      color: var(--muted);
+      font-family: "EB Garamond", Garamond, Georgia, serif;
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .155em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 170ms ease;
+    }
+    .top-nav a::after {
+      content: "";
+      position: absolute;
+      left: 50%; bottom: -7px;
+      width: 0; height: 1px;
+      background: var(--olive);
+      transform: translateX(-50%);
+      transition: width 170ms ease;
+    }
+    .top-nav a:hover, .top-nav a.current { color: var(--burgundy); }
+    .top-nav a:hover::after, .top-nav a.current::after { width: 100%; }
+    .top-nav .research-nav {
+      color: var(--olive-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: .94rem;
+      font-weight: 600;
+      letter-spacing: .135em;
+    }
+    .profile-layout { display: block; }
+    .introduction { min-width: 0; padding-top: 0; }
+    h1 {
+      margin: 0;
+      color: var(--burgundy-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: clamp(4.6rem, 7.7vw, 6.45rem);
+      font-weight: 500;
+      line-height: .85;
+      letter-spacing: -.052em;
+    }
+    h1 span { color: var(--burgundy); }
+    .affiliations {
+      margin: 11px 0 0;
+      color: var(--muted);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 1.18rem;
+      line-height: 1.44;
+    }
+    .affiliations em { display: block; font-weight: 400; }
+    p {
+      max-width: 64ch;
+      margin: 0 0 1.3em;
+      font-family: "EB Garamond", Garamond, Georgia, serif;
+      text-wrap: pretty;
+    }
+    .opening-paragraph { margin-top: 18px; font-size: 1.075rem; line-height: 1.82; }
+    .opening-paragraph::first-letter {
+      float: left;
+      margin: .035em .095em 0 0;
+      color: var(--burgundy);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 4.35rem;
+      font-weight: 500;
+      line-height: .74;
+    }
+
+    .prior { margin-top: 27px; }
+    footer {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 42px;
+      align-items: end;
+      margin-top: 69px;
+      padding-top: 22px;
+      color: var(--muted);
+    }
+    footer p { margin: 0; }
+    .copyright {
+      white-space: nowrap;
+      font-size: .75rem;
+      letter-spacing: .04em;
+    }
+    .copyright strong { color: var(--olive-deep); font-weight: 500; }
+    .typeface-note {
+      justify-self: end;
+      max-width: 560px;
+      color: #7d756b;
+      font-size: .82rem;
+      font-style: italic;
+      line-height: 1.45;
+      text-align: right;
+    }
+    .typeface-note .cormorant {
+      color: var(--burgundy-deep);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 1.08em;
+      font-style: normal;
+      font-weight: 500;
+    }
+    .typeface-note .eb-garamond {
+      color: var(--olive-deep);
+      font-family: "EB Garamond", Garamond, Georgia, serif;
+      font-size: 1.02em;
+      font-style: normal;
+      font-weight: 500;
+    }
+    @media (max-width: 900px) {
+      h1 { font-size: clamp(4rem, 8vw, 5.35rem); }
+    }
+    @media (max-width: 680px) {
+      body { font-size: 17px; }
+      .page { width: calc(100% - 34px); padding-top: 28px; }
+      .top-nav { margin-bottom: 48px; }
+      .nav-left { gap: 18px; }
+      .top-nav a { font-size: .6rem; }
+      .top-nav .research-nav { font-size: .78rem; }
+      h1 { font-size: clamp(3.75rem, 18vw, 5rem); }
+      .affiliations { margin-top: 9px; font-size: 1.08rem; }
+      .opening-paragraph { margin-top: 17px; }
+      footer { display: block; }
+      .typeface-note { max-width: none; margin-top: 13px; font-size: .78rem; text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <nav class="top-nav" aria-label="Main navigation">
+      <div class="nav-left">
+        <a href="index.html" class="current">Home</a>
+        <a href="https://scholar.google.com/citations?user=-io3rR0AAAAJ" target="_blank" rel="noopener noreferrer">Google Scholar</a>
+      </div>
+      <a href="research.html" class="research-nav">Research</a>
+    </nav>
+    <section class="profile-layout">
+      <div class="introduction">
+        <header>
+          <h1>Gülce <span>Kardeş</span></h1>
+          <p class="affiliations">
+            <em>PhD candidate at the University of Colorado Boulder</em>
+            <em>Graduate Fellow at the Santa Fe Institute</em>
+          </p>
+        </header>
+        <p class="opening-paragraph">
+          I am a PhD candidate in theoretical computer science at the
+          University of Colorado Boulder, advised by Joshua Grochow and
+          Rafael Frongillo. I am also a Graduate Fellow at the Santa Fe
+          Institute. My research focus is computational complexity theory,
+          where I aim to understand which problems can be solved
+          efficiently across different models of computation, and which
+          structural properties make certain problems fundamentally hard.
+        </p>
+        <p>
+          I am currently working on circuit-complexity lower bounds using
+          algebraic, analytic, and combinatorial methods.
+        </p>
+        <p>
+          Computational complexity theory teaches us how to design procedures
+          that achieve specific goals under resource constraints.
+          A part of my intellectual life involves bringing this
+          perspective to the study of human problem-solving through studies
+          on puzzles with collaborators at the Santa Fe Institute.
+        </p>
+        <p class="prior">
+          Prior to my PhD, I received a BSc in Physics (2022) from the
+          University of Leipzig and worked on the thermodynamics of
+          computation beyond bit erasure.
+        </p>
+      </div>
+    </section>
+    <footer>
+      <p class="copyright">© 2026 <strong>Gülce Kardeş</strong></p>
+      <p class="typeface-note">
+        Set in two of my favorite typefaces:
+        <span class="cormorant">Cormorant Garamond</span>
+        and <span class="eb-garamond">EB Garamond</span>.
+      </p>
+    </footer>
+  </main>
+</body>
+</html>
